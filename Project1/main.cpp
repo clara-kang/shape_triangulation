@@ -22,6 +22,7 @@ sf::Text buttonText;
 
 std::vector<BezierCurve*> curvesSoup;
 std::shared_ptr<BezierPoint> loneBP;
+glm::vec2 lastClickedPos;
 
 void drawMenuBar(sf::RenderWindow &window, sf::Font &font) {
 	float window_width = window.getSize().x;
@@ -50,6 +51,12 @@ bool isCurveModeClicked(int x, int y) {
 
 bool isMenuClicked(int y) {
 	return y < MENU_WIDTH;
+}
+
+void drawCurves(sf::RenderWindow &window) {
+	for (std::vector<BezierCurve*>::iterator it = curvesSoup.begin(); it != curvesSoup.end(); ++it) {
+		(*it)->render(window);
+	}
 }
 
 int main()
@@ -88,27 +95,32 @@ int main()
 					}
 				}
 				else {
+					glm::vec2 clickedPos = glm::vec2(event.mouseButton.x, event.mouseButton.y); 
+					bool cubic = (curveMode == CUBIC);
 					if (drawMode == OFF) {
 						drawMode = ON;
-						loneBP = std::make_shared<BezierPoint>(glm::vec2(event.mouseButton.x, event.mouseButton.y));
+						loneBP = std::make_shared<BezierPoint>(clickedPos, cubic);
 						loneBP->render(window);
 					}
 					else {
 						drawMode = OFF;
-						BezierPoint endBP(glm::vec2(event.mouseButton.x, event.mouseButton.y));
+						BezierPoint endBP(clickedPos, cubic);
 						/*endBP.render(window);*/
 						if (curveMode == CUBIC) {
 							// create cubic curve
 							Cubic *cubic = new Cubic(*loneBP, endBP);
-							cubic->render(window);
 							curvesSoup.push_back(cubic);
 						}
 						else {
 							// create line
+							Linear *linear = new Linear(*loneBP, endBP);
+							curvesSoup.push_back(linear);
 						}
 					}
+					lastClickedPos = clickedPos;
 				}
 				drawMenuBar(window, font);
+				drawCurves(window);
 				window.display();
 			}
 		}
