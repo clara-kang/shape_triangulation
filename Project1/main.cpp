@@ -9,7 +9,7 @@
 #include "BezierCurve.hpp"
 
 enum CurveMode {LINEAR, CUBIC};
-enum DrawMode {ON, OFF};
+enum DrawMode {ON, OFF, MOVE_CTRL, MOVE_BP};
 
 CurveMode curveMode = LINEAR;
 DrawMode drawMode = OFF;
@@ -17,12 +17,18 @@ DrawMode drawMode = OFF;
 int BUTTON_XOFFSET = 30;
 int BUTTON_LEN = 50;
 int MENU_WIDTH = 25;
+float DETECTION_RANGE = 8; // in pixel
 
 sf::Text buttonText;
 
+// all the curves
 std::vector<BezierCurve*> curvesSoup;
+// unfinished curve
 std::shared_ptr<BezierPoint> loneBP;
+// last mouse clicked position
 glm::vec2 lastClickedPos;
+// chosen bezier point to change position
+BezierPoint* clickedBp;
 
 void drawMenuBar(sf::RenderWindow &window, sf::Font &font) {
 	float window_width = window.getSize().x;
@@ -53,10 +59,60 @@ bool isMenuClicked(int y) {
 	return y < MENU_WIDTH;
 }
 
+// helper for isHandleClicked
+bool isThisHandleClicked(BezierPoint &bp, glm::vec2 clickedPos) {
+	float clickPos2Handle = glm::distance(bp.ctrl_loc, clickedPos);
+	return (clickPos2Handle < DETECTION_RANGE);
+}
+
+// helper for isBPClicked
+bool isThisBPClicked(BezierPoint &bp, glm::vec2 clickedPos) {
+	float clickPos2BP = glm::distance(bp.loc, clickedPos);
+	return (clickPos2BP < DETECTION_RANGE);
+}
+
+// check if any bezier point handle clicked
+bool isHandleClicked(glm::vec2 clickedPos) {
+	for (std::vector<BezierCurve*>::iterator it = curvesSoup.begin(); it != curvesSoup.end(); ++it) {
+		BezierPoint &sBp = (*it)->getStart();
+		BezierPoint &eBp = (*it)->getEnd();
+		if (sBp.isCubic() && isThisHandleClicked(sBp, clickedPos)) {
+			clickedBp = &((*it)->start);
+			return true;
+		}
+		else if (eBp.isCubic() && isThisHandleClicked(eBp, clickedPos)) {
+			clickedBp = &((*it)->end);
+			return true;
+		}
+	}
+	return false;
+}
+
+// check if any bezier point clicked
+bool isBPClicked(glm::vec2 clickedPos) {
+	for (std::vector<BezierCurve*>::iterator it = curvesSoup.begin(); it != curvesSoup.end(); ++it) {
+		if ( isThisBPClicked((*it)->getStart(), clickedPos)) {
+			clickedBp = &((*it)->start);
+			return true;
+		}
+		else if (isThisBPClicked((*it)->getEnd(), clickedPos)) {
+			clickedBp = &((*it)->end);
+			return true;
+		}
+	}
+	return false;
+}
+
 void drawCurves(sf::RenderWindow &window) {
 	for (std::vector<BezierCurve*>::iterator it = curvesSoup.begin(); it != curvesSoup.end(); ++it) {
 		(*it)->render(window);
 	}
+}
+
+void redrawEvrything(sf::RenderWindow &window, sf::Font &font) {
+	drawMenuBar(window, font);
+	drawCurves(window);
+	window.display();
 }
 
 int main()
@@ -77,6 +133,26 @@ int main()
 	{
 		// check all the window's events that were triggered since the last iteration of the loop
 		sf::Event event;
+		// if dragging
+		if (drawMode == MOVE_CTRL || drawMode == MOVE_BP) {
+			 //mouse released
+			if (!sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+				drawMode = OFF;
+			}
+			else {
+				sf::Vector2i position = sf::Mouse::getPosition(window);
+				if (drawMode == MOVE_CTRL) {
+					clickedBp->ctrl_loc = glm::vec2(position.x, position.y);
+				}
+				else {
+					clickedBp->loc = glm::vec2(position.x, position.y);
+				}
+				// redraw
+				window.clear();
+				redrawEvrything(window, font);
+			}
+		} 
+
 		while (window.pollEvent(event))
 		{
 			// "close requested" event: we close the window
@@ -84,7 +160,9 @@ int main()
 				window.close();
 			if (event.type == sf::Event::MouseButtonPressed) {
 				std::cout << "mouse pressed: " << event.mouseButton.x << ", " << event.mouseButton.y << std::endl;
-				if (isMenuClicked(event.mouseButton.y)) {
+				// can only click menu is not in the middle of drawing a curve
+				if (isMenuClicked(event.mouseButton.y) && (drawMode!= ON)) {
+					// curve mode button clicked
 					if (isCurveModeClicked(event.mouseButton.x, event.mouseButton.y)) {
 						if (curveMode == LINEAR) {
 							curveMode = CUBIC;
@@ -97,15 +175,27 @@ int main()
 				else {
 					glm::vec2 clickedPos = glm::vec2(event.mouseButton.x, event.mouseButton.y); 
 					bool cubic = (curveMode == CUBIC);
+					// if not in the middle of drawing a curve
 					if (drawMode == OFF) {
-						drawMode = ON;
-						loneBP = std::make_shared<BezierPoint>(clickedPos, cubic);
-						loneBP->render(window);
+						// check if any handle chosen
+						if (isHandleClicked(clickedPos)) {
+							drawMode = MOVE_CTRL;
+						}
+						// check if any bp chosen
+						else if (isBPClicked(clickedPos)) {
+							drawMode = MOVE_BP;
+						}
+						// starting a new curve
+						else {
+							drawMode = ON;
+							loneBP = std::make_shared<BezierPoint>(clickedPos, cubic);
+							loneBP->render(window);
+						}
 					}
-					else {
+					// if in the middle of drawing a curve
+					else if (drawMode == ON) {
 						drawMode = OFF;
 						BezierPoint endBP(clickedPos, cubic);
-						/*endBP.render(window);*/
 						if (curveMode == CUBIC) {
 							// create cubic curve
 							Cubic *cubic = new Cubic(*loneBP, endBP);
@@ -119,9 +209,7 @@ int main()
 					}
 					lastClickedPos = clickedPos;
 				}
-				drawMenuBar(window, font);
-				drawCurves(window);
-				window.display();
+				redrawEvrything(window, font);
 			}
 		}
 

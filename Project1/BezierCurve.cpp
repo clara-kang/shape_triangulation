@@ -12,12 +12,13 @@ BezierCurve::BezierCurve(BezierPoint start, BezierPoint end) {
 	this->start = start;
 	this->end = end;
 }
-glm::vec2 BezierCurve::getStart() {
-	return start.loc;
+
+BezierPoint &BezierCurve::getStart() {
+	return start;
 };
 
-glm::vec2 BezierCurve::getEnd() {
-	return end.loc;
+BezierPoint &BezierCurve::getEnd() {
+	return end;
 }
 
 void BezierCurve::renderPts(sf::RenderWindow &window) {

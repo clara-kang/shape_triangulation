@@ -15,6 +15,10 @@ BezierPoint::BezierPoint(glm::vec2 loc, bool cubic=false) {
 	this->cubic = cubic;
 }
 
+bool BezierPoint::isCubic() const{
+	return cubic;
+}
+
 void BezierPoint::render(sf::RenderWindow &window) {
 	// need to offset since circle center not drawn where clicked
 	sf::Vector2f pt_loc(this->loc.x - CIRCLE_RADIUS / 2.f, this->loc.y - CIRCLE_RADIUS / 2.f);

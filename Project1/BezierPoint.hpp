@@ -8,6 +8,7 @@ public:
 	BezierPoint() {};
 	BezierPoint(glm::vec2 loc, bool cubic);
 
+	bool isCubic() const;
 	void render(sf::RenderWindow &window);
 	glm::vec2 loc;
 	glm::vec2 ctrl_loc;
