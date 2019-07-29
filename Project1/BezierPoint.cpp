@@ -11,12 +11,22 @@ float SQUARE_LEN = 5.f;
 
 BezierPoint::BezierPoint(glm::vec2 loc, bool cubic=false) {
 	this->loc = loc;
-	this->ctrl_loc = loc + DEFAULT_XOFFSET * glm::vec2(1.f, 0.f);
 	this->cubic = cubic;
+	if (cubic) {
+		this->ctrl_loc = loc + DEFAULT_XOFFSET * glm::vec2(1.f, 0.f);
+	}
 }
 
 bool BezierPoint::isCubic() const{
 	return cubic;
+}
+
+void BezierPoint::moveTo(glm::vec2 pos) {
+	glm::vec2 translateAmt = pos - this->loc;
+	this->loc = pos;
+	if (cubic) {
+		this->ctrl_loc += translateAmt;
+	}
 }
 
 void BezierPoint::render(sf::RenderWindow &window) {
@@ -31,14 +41,14 @@ void BezierPoint::render(sf::RenderWindow &window) {
 
 	if (this->cubic) {
 		sf::RectangleShape rect(sf::Vector2f(SQUARE_LEN, SQUARE_LEN));
-		rect.setFillColor(sf::Color::White);
+		rect.setFillColor(sf::Color::Yellow);
 		rect.setPosition(ctrl_pt_loc);
 		window.draw(rect);
 		// draw line between pt and ctrl_pt
 		sf::Vertex line[] =
 		{
-			sf::Vertex(sf::Vector2f(this->loc.x, this->loc.y)),
-			sf::Vertex(sf::Vector2f(this->ctrl_loc.x, this->ctrl_loc.y))
+			sf::Vertex(sf::Vector2f(this->loc.x, this->loc.y), sf::Color::Yellow),
+			sf::Vertex(sf::Vector2f(this->ctrl_loc.x, this->ctrl_loc.y), sf::Color::Yellow)
 		};
 		window.draw(line, 2, sf::Lines);
 	}
