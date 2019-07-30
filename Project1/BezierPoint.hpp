@@ -9,6 +9,8 @@ public:
 	BezierPoint(glm::vec2 loc, bool cubic);
 
 	bool isCubic() const;
+	// move loc and ctrl
+	void moveTo(glm::vec2 pos);
 	void render(sf::RenderWindow &window);
 	glm::vec2 loc;
 	glm::vec2 ctrl_loc;

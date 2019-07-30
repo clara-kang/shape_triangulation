@@ -5,9 +5,11 @@
 #include <vector>
 #include <memory>
 #include <glm/glm.hpp>
+#include <map>
 #include "BezierPoint.hpp"
 #include "BezierCurve.hpp"
 #include "Shape.hpp"
+#include "PointUtil.hpp"
 
 enum CurveMode {LINEAR, CUBIC};
 enum DrawMode {ON, OFF, MOVE_CTRL, MOVE_BP};
@@ -19,6 +21,7 @@ int BUTTON_XOFFSET = 30;
 int BUTTON_LEN = 50;
 int MENU_WIDTH = 25;
 float DETECTION_RANGE = 12; // in pixel
+float PS_Lm = 20; // distance between points
 
 sf::Text buttonText;
 
@@ -34,6 +37,10 @@ BezierPoint* clickedBp;
 BezierCurve* clickedCurve;
 // the shapes
 std::vector<Shape*> shapesSoup;
+// the point sets
+std::vector<PointUtil*> pointUtils;
+// the map mapping completed shapes to pointUtils
+std::map<Shape *, PointUtil*> shape2Points;
 
 void drawMenuBar(sf::RenderWindow &window, sf::Font &font) {
 	float window_width = window.getSize().x;
@@ -188,9 +195,16 @@ void drawCurves(sf::RenderWindow &window) {
 	}
 }
 
+void drawPSets(sf::RenderWindow &window) {
+	for (auto it = pointUtils.begin(); it != pointUtils.end(); ++it) {
+		(*it)->render(window);
+	}
+}
+
 void redrawEvrything(sf::RenderWindow &window, sf::Font &font) {
 	drawMenuBar(window, font);
 	drawCurves(window);
+	drawPSets(window);
 	window.display();
 }
 
@@ -235,12 +249,19 @@ int main()
 					if (bp_together != NULL) {
 						bp_together->moveTo(glm::vec2(position.x, position.y));
 					}
+
 					Shape *cShape = NULL;
 					// if need to merge
 					if (closeToShape(&cShape)) {
 						mergeShape(cShape);
 						// terminate dragging
 						drawMode = OFF;
+					}
+					if (cShape != NULL && cShape->completed) {
+						PointUtil *pUtil = new PointUtil(cShape, PS_Lm);
+						pUtil->computePm();
+						pointUtils.push_back(pUtil);
+						shape2Points[cShape] = pUtil;
 					}
 				}
 				// redraw
