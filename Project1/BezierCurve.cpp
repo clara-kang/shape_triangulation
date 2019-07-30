@@ -25,6 +25,10 @@ void BezierCurve::renderPts(sf::RenderWindow &window) {
 
 Linear::Linear(BezierPoint start, BezierPoint end) : BezierCurve(start, end) {}
 
+BezierCurve::type Linear::getType() {
+	return BezierCurve::type::LINEAR;
+}
+
 float Linear::getLength() {
 	if (length == 0) {
 		length = glm::distance(start.loc, end.loc);
@@ -32,8 +36,22 @@ float Linear::getLength() {
 	return length;
 }
 
-glm::vec2 Linear::getPointAtLength(float length) {
-	return start.loc + glm::normalize(end.loc - start.loc) * length;
+glm::vec2 Linear::getPointAtLength(float stoplength) {
+	float t;
+	return getPointAtLength(stoplength, t);
+}
+
+glm::vec2 Linear::getPointAtLength(float stoplength, float &stopt) {
+	stopt = stoplength / this->length;
+	return start.loc + glm::normalize(end.loc - start.loc) * stoplength;
+}
+
+glm::vec2 rotate90cw(glm::vec2 v) {
+	return glm::vec2(v.y, -v.x);
+}
+
+glm::vec2 rotate90ccw(glm::vec2 v) {
+	return glm::vec2(-v.y, v.x);
 }
 
 glm::vec2 Linear::getNormalAtT(float t, bool cw) {
@@ -41,11 +59,12 @@ glm::vec2 Linear::getNormalAtT(float t, bool cw) {
 	if (glm::length(normal) < 1.f) {
 		glm::vec2 s2e = end.loc - start.loc;
 		glm::vec2 normal_nn;
+		// inverted, something to do with the display??
 		if (cw) {
-			normal_nn = glm::vec2(s2e.y, -s2e.x);
+			normal_nn = rotate90ccw(s2e);
 		}
 		else {
-			normal_nn = glm::vec2(-s2e.y, s2e.x);
+			normal_nn = rotate90cw(s2e);
 		}
 		normal = glm::normalize(normal_nn);
 	}
@@ -64,6 +83,10 @@ void Linear::render(sf::RenderWindow &window) {
 }
 
 Cubic::Cubic(BezierPoint start, BezierPoint end) : BezierCurve(start, end) {}
+
+BezierCurve::type Cubic::getType() {
+	return BezierCurve::type::CUBIC;
+}
 
 glm::vec2 Cubic::getPointAtT(float t) {
 	glm::vec2 pos = pow(1.f - t, 3.f) * start.loc + 3.f * pow(1.f - t, 2.f) * t * start.ctrl_loc
@@ -111,6 +134,11 @@ float Cubic::getLengthAtT(float tstop) {
 
 // like binary search
 glm::vec2 Cubic::getPointAtLength(float stoplength) {
+	float t;
+	return getPointAtLength(stoplength, t);
+}
+
+glm::vec2 Cubic::getPointAtLength(float stoplength, float &stopt) {
 	float len = 0;
 	float dlen = 0;
 	float step_size = 1.f / (float)STEPS; // in terms of t
@@ -131,15 +159,20 @@ glm::vec2 Cubic::getPointAtLength(float stoplength) {
 		}
 		lastPos = pos;
 	}
-
+	stopt = t;
 	return getPointAtT(t);
 }
 
 glm::vec2 Cubic::getNormalAtT(float t, bool cw) {
-	glm::vec2 normalAtT_nn = 6.f * (1.f - t) * (end.ctrl_loc - 2.f *start.ctrl_loc + start.loc)
-		+ 6.f * t * (end.loc - 2.f*end.ctrl_loc + start.ctrl_loc);
-	if (!cw) {
-		normalAtT_nn *= -1.f;
+	glm::vec2 tangent_nn = 3.f * pow(1.f - t, 2.f) * (start.ctrl_loc - start.loc)
+		+ 6.f * (1.f - t) * t * (end.ctrl_loc - start.ctrl_loc) + 3.f * pow(t, 2.f) * (end.loc - end.ctrl_loc);
+	glm::vec2 tangent = glm::normalize(tangent_nn);
+	glm::vec2 normal;
+	if (cw) {
+		normal = rotate90ccw(tangent);
 	}
-	return glm::normalize(normalAtT_nn);
+	else {
+		normal = rotate90cw(tangent);
+	}
+	return normal;
 }

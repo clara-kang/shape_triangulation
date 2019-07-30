@@ -69,10 +69,52 @@ BezierPoint *Shape::getNbPoint(BezierPoint *bp) {
 	}
 }
 
+float getSignedAngle(glm::vec2 v1, glm::vec2 v2) {
+	float cosTheta = glm::dot(v1, v2) / (glm::length(v1) * glm::length(v2));
+	float theta = acos(cosTheta);
+	glm::mat2 detMat(v1.x, v1.y, v2.x, v2.y);
+	float det = glm::determinant(detMat);
+	if (det >= 0) {
+		return theta;
+	}
+	else {
+		return -theta;
+	}
+}
+
+glm::vec2 getV1(BezierCurve *curve) {
+	if (curve->getType() == BezierCurve::type::CUBIC) {
+		return curve->start.ctrl_loc - curve->start.loc;
+	}
+	else {
+		return curve->end.loc - curve->start.loc;
+	}
+}
+
 bool Shape::isClockWise() {
-	if (curves.size() < 2) {
-		throw std::exception("less than 2 curves, cannot determine orientation");
-		return false;
+	float winding_num = 0.f;
+	for (int i = 0; i < curves.size(); i++) {
+		BezierCurve *curve = curves[i];
+		glm::vec2 lastV;
+		// cubic curves approx by ctrl poitns
+		if (curve->getType() == BezierCurve::type::CUBIC) {
+			glm::vec2 v1 = curve->start.ctrl_loc - curve->start.loc;
+			glm::vec2 v2 = curve->end.ctrl_loc - curve->start.ctrl_loc;
+			glm::vec2 v3 = curve->end.loc - curve->end.ctrl_loc;
+			// accumulate winding number
+			winding_num += getSignedAngle(v1, v2);
+			winding_num += getSignedAngle(v2, v3);
+			lastV = v3;
+		}
+		else {
+			// linear curve
+			lastV = curve->end.loc - curve->start.loc;
+		}
+		glm::vec2 nextV = getV1(curves[(i + 1) % curves.size()]);
+		winding_num += getSignedAngle(lastV, nextV);
+	}
+	if (winding_num > 0) {
+		return true;
 	}
 	return false;
 }

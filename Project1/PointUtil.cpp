@@ -6,9 +6,11 @@ PointUtil::PointUtil(Shape *shape, float Lm) {
 }
 
 void PointUtil::computePm() {
+	bool clockWise = shape->isClockWise();
 	for (auto it = (shape->curves).begin(); it != (shape->curves).end(); ++it) {
 		BezierCurve *curve = *it;
 		glm::vec2 loc = curve->getEnd().loc;
+		glm::vec2 normal;
 		// set vertex points
 		Pm.push_back(Point(loc, Point::Type::VERTEX));
 
@@ -19,8 +21,10 @@ void PointUtil::computePm() {
 		// how long segment between two E points is
 		float segLen = curveLen / (float)segNum;
 		for (int i = 1; i < segNum; i++) {
-			loc = curve->getPointAtLength(segLen * (float)i);
-			Pm.push_back(Point(loc, Point::Type::EDGE));
+			float t;
+			loc = curve->getPointAtLength(segLen * (float)i, t);
+			normal = curve->getNormalAtT(t, clockWise);
+			Pm.push_back(Point(loc, normal, Point::Type::EDGE));
 		}
 
 		// set internal points

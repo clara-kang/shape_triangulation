@@ -1,6 +1,7 @@
 #include "Point.hpp"
 
 float PPOINT_RADIUS = 2.f;
+float NORMAL_LENGTH = 8.f;
 
 Point::Point(glm::vec2 loc, Type type) {
 	this->loc = loc;
@@ -18,4 +19,15 @@ void Point::render(sf::RenderWindow &window) {
 	circle.setFillColor(sf::Color::Green);
 	circle.setPosition(pt_loc);
 	window.draw(circle);
+
+	// if normal defined
+	if (glm::length(normal) > 0.f) {
+		glm::vec2 normal_ep = loc + NORMAL_LENGTH * normal;
+		sf::Vertex line[] =
+		{
+			sf::Vertex(sf::Vector2f(loc.x, loc.y), sf::Color::Yellow),
+			sf::Vertex(sf::Vector2f(normal_ep.x, normal_ep.y), sf::Color::Yellow)
+		};
+		window.draw(line, 2, sf::Lines);
+	}
 }
