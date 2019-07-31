@@ -29,7 +29,11 @@ public:
 	// put all curves of the other shape to the end
 	void mergeToTail(Shape *to_merge);
 
+	// positively oriented
 	bool isClockWise();
+
+	// point within shape
+	bool pInShape(glm::vec2 &ploc);
 
 	// get nb
 	BezierPoint *getNbPoint(BezierPoint *bp);

@@ -18,6 +18,7 @@ public:
 
 	Point(glm::vec2 loc, glm::vec2 normal, Type type);
 
+	Point(const Point &p);
 	void render(sf::RenderWindow &window);
 
 };

@@ -259,6 +259,7 @@ int main()
 					}
 					if (cShape != NULL && cShape->completed) {
 						PointUtil *pUtil = new PointUtil(cShape, PS_Lm);
+						pUtil->passWindow(&window);
 						pUtil->computePm();
 						pointUtils.push_back(pUtil);
 						shape2Points[cShape] = pUtil;

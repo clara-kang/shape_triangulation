@@ -1,4 +1,6 @@
+#pragma once
 #include "Shape.hpp"
+#include "MathUtil.hpp"
 
 Shape::Shape(BezierCurve *curve) {
 	curves.push_back(curve);
@@ -69,19 +71,6 @@ BezierPoint *Shape::getNbPoint(BezierPoint *bp) {
 	}
 }
 
-float getSignedAngle(glm::vec2 v1, glm::vec2 v2) {
-	float cosTheta = glm::dot(v1, v2) / (glm::length(v1) * glm::length(v2));
-	float theta = acos(cosTheta);
-	glm::mat2 detMat(v1.x, v1.y, v2.x, v2.y);
-	float det = glm::determinant(detMat);
-	if (det >= 0) {
-		return theta;
-	}
-	else {
-		return -theta;
-	}
-}
-
 glm::vec2 getV1(BezierCurve *curve) {
 	if (curve->getType() == BezierCurve::type::CUBIC) {
 		return curve->start.ctrl_loc - curve->start.loc;
@@ -114,6 +103,21 @@ bool Shape::isClockWise() {
 		winding_num += getSignedAngle(lastV, nextV);
 	}
 	if (winding_num > 0) {
+		return true;
+	}
+	return false;
+}
+
+bool Shape::pInShape(glm::vec2 &ploc) {
+	// should a random direction be used?
+	glm::vec2 ray_dir(1.0, 0.0);
+	int intrsct_times = 0;
+	for (auto it = curves.begin(); it != curves.end(); ++it) {
+		if ((*it)->intersect(ploc, ray_dir)) {
+			intrsct_times++;
+		}
+	}
+	if (intrsct_times % 2 == 1) {
 		return true;
 	}
 	return false;

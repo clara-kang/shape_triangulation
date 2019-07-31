@@ -1,9 +1,10 @@
 #pragma once
 #include "BezierPoint.hpp"
 #include "BezierCurve.hpp"
+#include "MathUtil.hpp"
 
 float POINT_RADIUS = 5.f;
-float ERROR_FRAC = 0.01;
+float ERROR_FRAC = 0.01f;
 
 BezierCurve::BezierCurve(BezierPoint start, BezierPoint end) {
 	this->start = start;
@@ -46,12 +47,28 @@ glm::vec2 Linear::getPointAtLength(float stoplength, float &stopt) {
 	return start.loc + glm::normalize(end.loc - start.loc) * stoplength;
 }
 
-glm::vec2 rotate90cw(glm::vec2 v) {
-	return glm::vec2(v.y, -v.x);
+// assume ray_dir is normalized
+bool Linear::intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir, glm::vec2 &intrsctn) {
+	// normalized direction vector from start to end
+	glm::vec2 c_dir = end.loc - start.loc;
+	// lhs of the equation
+	glm::mat2 A = glm::mat2(ray_dir, -c_dir);
+	// rhs of the equation
+	glm::vec2 B = start.loc - ray_start;
+	// distance to travel on the ray, and t on the line seg
+	glm::vec2 X = glm::inverse(A) * B;
+	// check if distance is positive, and t is from 0 to 1
+	float t = X.y;
+	if (X.x > 0 && t >= 0.f && t <= 1.f) {
+		intrsctn = start.loc + t * c_dir;
+		return true;
+	}
+	return false;
 }
 
-glm::vec2 rotate90ccw(glm::vec2 v) {
-	return glm::vec2(-v.y, v.x);
+bool Linear::intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir) {
+	glm::vec2 intrsctn;
+	return intersect(ray_start, ray_dir, intrsctn);
 }
 
 glm::vec2 Linear::getNormalAtT(float t, bool cw) {
@@ -175,4 +192,17 @@ glm::vec2 Cubic::getNormalAtT(float t, bool cw) {
 		normal = rotate90cw(tangent);
 	}
 	return normal;
+}
+
+bool Cubic::intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir) {
+	std::vector<Linear> segs(3);
+	segs.push_back(Linear(BezierPoint(start.loc, false), BezierPoint(start.ctrl_loc, false)));
+	segs.push_back(Linear(BezierPoint(start.ctrl_loc, false), BezierPoint(end.ctrl_loc, false)));
+	segs.push_back(Linear(BezierPoint(end.ctrl_loc, false), BezierPoint(end.loc, false)));
+	for (int i = 0; i < 3; i++) {
+		if (segs[i].intersect(ray_start, ray_dir)) {
+			return true;
+		}
+	}
+	return false;
 }

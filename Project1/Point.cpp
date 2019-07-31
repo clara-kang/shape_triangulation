@@ -12,6 +12,12 @@ Point::Point(glm::vec2 loc, glm::vec2 normal, Type type) : Point(loc, type) {
 	this->normal = normal;
 }
 
+Point::Point(const Point &p) {
+	this->loc = p.loc;
+	this->normal = p.normal;
+	this->type = p.type;
+}
+
 void Point::render(sf::RenderWindow &window) {
 	sf::Vector2f pt_loc(this->loc.x - PPOINT_RADIUS / 2.f, this->loc.y - PPOINT_RADIUS / 2.f);
 

@@ -1,6 +1,5 @@
-#include "BezierPoint.hpp"
-
 #pragma once
+#include "BezierPoint.hpp"
 #include <glm/glm.hpp>
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
