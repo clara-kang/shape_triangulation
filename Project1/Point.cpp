@@ -1,7 +1,7 @@
 #include "Point.hpp"
 
 float PPOINT_RADIUS = 2.f;
-float NORMAL_LENGTH = 8.f;
+float NORMAL_LENGTH = 10.f;
 
 Point::Point(glm::vec2 loc, Type type) {
 	this->loc = loc;

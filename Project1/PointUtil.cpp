@@ -3,8 +3,7 @@
 #include "MathUtil.hpp"
 #include <algorithm>
 #include <iostream>
-
-float EPSILON = 0.01f;
+#include <list>
 
 PointUtil::PointUtil(Shape *shape, float Lm) {
 	this->shape = shape;
@@ -39,8 +38,78 @@ void PointUtil::computePm() {
 			Pw.push_back(Pe);
 		}
 	}
+	mergePbs();
 	// set internal points
 	computeIPoints();
+}
+
+void PointUtil::rmPfromPm(Point *P) {
+	auto it = std::find(Pm.begin(), Pm.end(), P);
+	auto it_w = std::find(Pw.begin(), Pw.end(), P);
+	if (it_w != Pw.end()) {
+		Pw.erase(it_w);
+	}
+	if (it != Pm.end()) {
+		Pm.erase(it);
+	}
+	else {
+		throw std::exception("cannot find P to delete from PM");
+	}
+}
+
+void nullFromVector(std::vector<Point *> &v, Point *P) {
+	for (int i = 0; i < v.size(); i++) {
+		if (v[i] == P) {
+			v[i] = NULL;
+			return;
+		}
+	}
+}
+
+void clearNulls(std::vector<Point *> &v) {
+	for (auto it = v.begin(); it != v.end();) {
+		if (*it == NULL) {
+			it = v.erase(it);
+		}
+		else {
+			++it;
+		}
+	}
+}
+
+void PointUtil::mergePbs() {
+	for (int i = 0; i < Pm.size(); i++) {
+		if (Pm[i] == NULL) {
+			continue;
+		}
+		Point *p1 = Pm[i];
+		for (int j = 0; j < Pm.size(); j++) {
+			if (i == j || Pm[j] == NULL) {
+				continue;
+			}
+			Point *p2 = Pm[j];
+			// not itself
+			float dist = glm::distance(p1->loc, p2->loc);
+			if (dist <= Lm) {
+				// if p1 v-point, p2 v-point or e-point, remove p2
+				if (p1->type == Point::Type::VERTEX) {
+					nullFromVector(Pm, p2);
+					nullFromVector(Pw, p2);
+					delete p2;
+					continue;
+				}
+				// if p2 v-point, p1 v-point or e-point, remove p1
+				else if (p1->type == Point::Type::EDGE) {
+					nullFromVector(Pm, p1);
+					nullFromVector(Pw, p2);
+					delete p1;
+					break;
+				}
+			}
+		}
+	}
+	clearNulls(Pm);
+	clearNulls(Pw);
 }
 
 void PointUtil::getPf(Point *P, Point *Pf) {
@@ -91,7 +160,7 @@ bool PointUtil::getClosestInPm(Point *P, Point **closeP) {
 	auto res_it = std::min_element(Pm.begin(), Pm.end(), dist2P);
 	float min_dist = glm::distance(P->loc, (*res_it)->loc);
 	*closeP = (*res_it);
-	if (min_dist >= Lm - EPSILON) {
+	if (min_dist >= Lm) {
 		return false;
 	}
 	if (res_it == Pm.end()) {
@@ -117,21 +186,6 @@ void takeAvg(Point *P1, Point *P2, Point *Pres) {
 	Pres->type = Point::Type::INTERNAL;
 }
 
-void PointUtil::rmPfromPm(Point *P) {
-	auto it = std::find(Pm.begin(), Pm.end(), P);
-	auto it_w = std::find(Pw.begin(), Pw.end(), P);
-	if (it != Pm.end()) {
-		delete P;
-		Pm.erase(it);
-	}
-	else {
-		throw std::exception("cannot find P to delete from PM");
-	}
-	if (it_w != Pw.end()) {
-		Pw.erase(it_w);
-	}
-}
-
 // P1 has not been added to Pm yet
 bool PointUtil::mergeTwoPoints(Point *P1, Point *P2, Point *Pres) {
 	if (P1->type == Point::Type::INTERNAL) {
@@ -144,12 +198,14 @@ bool PointUtil::mergeTwoPoints(Point *P1, Point *P2, Point *Pres) {
 			takeAvg(P1, P2, Pres);
 			// remove P1, P2
 			rmPfromPm(P2);
+			delete P2;
 			return true;
 		}
 	}
 	else if (P2->type == Point::Type::INTERNAL) {
 		// P1 must be on boundary, remove P2
 		rmPfromPm(P2);
+		delete P2;
 		return false;
 	}
 	else {

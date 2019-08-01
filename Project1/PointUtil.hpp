@@ -18,6 +18,7 @@ public:
 
 private:
 	void computeIPoints();
+	void mergePbs();
 	void getPf(Point *P, Point *Pf);
 	void getPl(Point *P, Point *Pl);
 	void getPr(Point *P, Point *Pr);
