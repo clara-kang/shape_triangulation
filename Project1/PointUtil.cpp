@@ -43,7 +43,7 @@ void PointUtil::computePm() {
 	computeIPoints();
 }
 
-void PointUtil::rmPfromPm(Point *P) {
+void PointUtil::rmPfromPmPw(Point *P) {
 	auto it = std::find(Pm.begin(), Pm.end(), P);
 	auto it_w = std::find(Pw.begin(), Pw.end(), P);
 	if (it_w != Pw.end()) {
@@ -170,19 +170,20 @@ bool PointUtil::getClosestInPm(Point *P, Point **closeP) {
 	return true;
 }
 
-glm::vec2 takeNormalAvg(glm::vec2 v1, glm::vec2 v2) {
-	float angle = getSignedAngle(v1, v2);
-	if (v1 == v2 || angle ==0.f || isnan(angle)) {
-		//throw std::exception("angle is nan");
-		std::cout << "angle is nan" << std::endl;
-		return glm::normalize(v1);
-	}
-	return rotate(v1, angle / 2.f);
-}
+//glm::vec2 takeNormalAvg(glm::vec2 v1, glm::vec2 v2) {
+//	float angle = getSignedAngle(v1, v2);
+//	if (v1 == v2 || angle ==0.f || isnan(angle)) {
+//		//throw std::exception("angle is nan");
+//		std::cout << "angle is nan" << std::endl;
+//		return glm::normalize(v1);
+//	}
+//	return rotate(v1, angle / 2.f);
+//}
 
 void takeAvg(Point *P1, Point *P2, Point *Pres) {
 	Pres->loc = 0.5f * (P1->loc + P2->loc);
-	Pres->normal = takeNormalAvg(P1->normal, P2->normal);
+	//Pres->normal = takeNormalAvg(P1->normal, P2->normal);
+	Pres->normal = glm::vec2(0.f);
 	Pres->type = Point::Type::INTERNAL;
 }
 
@@ -197,14 +198,14 @@ bool PointUtil::mergeTwoPoints(Point *P1, Point *P2, Point *Pres) {
 			// take avg of P1, P2
 			takeAvg(P1, P2, Pres);
 			// remove P1, P2
-			rmPfromPm(P2);
+			rmPfromPmPw(P2);
 			delete P2;
 			return true;
 		}
 	}
 	else if (P2->type == Point::Type::INTERNAL) {
 		// P1 must be on boundary, remove P2
-		rmPfromPm(P2);
+		rmPfromPmPw(P2);
 		delete P2;
 		return false;
 	}
@@ -236,8 +237,11 @@ bool PointUtil::mergeWPm(Point *P, Point *Pres) {
 				break;
 			}
 		}
-		Pm.push_back(Pres);
-		return true;
+		// should the merged point be added to Pw??
+		Point *mergedPoint = new Point(*Pres);
+		Pm.push_back(mergedPoint);
+		//return true;
+		return false;
 	}
 	return false;
 }

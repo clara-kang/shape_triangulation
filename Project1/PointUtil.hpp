@@ -26,7 +26,7 @@ private:
 	bool getClosestInPm(Point *P, Point **closeP);
 	bool mergeTwoPoints(Point *P1, Point *P2, Point *Pres);
 	bool mergeWPm(Point *P, Point *Pres);
-	void rmPfromPm(Point *P);
+	void rmPfromPmPw(Point *P);
 	// delete later
 	sf::RenderWindow *window;
 };
