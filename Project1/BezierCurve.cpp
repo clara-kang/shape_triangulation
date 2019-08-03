@@ -11,11 +11,11 @@ BezierCurve::BezierCurve(BezierPoint start, BezierPoint end) {
 	this->end = end;
 }
 
-BezierPoint &BezierCurve::getStart() {
+const BezierPoint &BezierCurve::getStart() {
 	return start;
 };
 
-BezierPoint &BezierCurve::getEnd() {
+const BezierPoint &BezierCurve::getEnd() {
 	return end;
 }
 
@@ -25,6 +25,22 @@ void BezierCurve::renderPts(sf::RenderWindow &window) {
 }
 
 Linear::Linear(BezierPoint start, BezierPoint end) : BezierCurve(start, end) {}
+
+void BezierCurve::moveStartPos(glm::vec2 pos) {
+	start.moveTo(pos);
+}
+
+void BezierCurve::moveEndPos(glm::vec2 pos) {
+	end.moveTo(pos);
+}
+
+void BezierCurve::moveStartCtrl(glm::vec2 pos) {
+	start.ctrl_loc = pos;
+}
+
+void BezierCurve::moveEndCtrl(glm::vec2 pos) {
+	end.ctrl_loc = pos;
+}
 
 BezierCurve::type Linear::getType() {
 	return BezierCurve::type::LINEAR;
@@ -99,7 +115,29 @@ void Linear::render(sf::RenderWindow &window) {
 	window.draw(line, 2, sf::Lines);
 }
 
-Cubic::Cubic(BezierPoint start, BezierPoint end) : BezierCurve(start, end) {}
+Cubic::Cubic(BezierPoint start, BezierPoint end) : 
+	BezierCurve(start, end){
+	getConvexHull();
+}
+
+void Cubic::moveStartPos(glm::vec2 pos) {
+	BezierCurve::moveStartPos(pos);
+	getConvexHull();
+}
+void Cubic::moveEndPos(glm::vec2 pos) {
+	BezierCurve::moveEndPos(pos);
+	getConvexHull();
+}
+
+void Cubic::moveStartCtrl(glm::vec2 pos) {
+	BezierCurve::moveStartCtrl(pos);
+	getConvexHull();
+}
+
+void Cubic::moveEndCtrl(glm::vec2 pos) {
+	BezierCurve::moveEndCtrl(pos);
+	getConvexHull();
+}
 
 BezierCurve::type Cubic::getType() {
 	return BezierCurve::type::CUBIC;
@@ -120,6 +158,15 @@ void Cubic::render(sf::RenderWindow &window) {
 		float t = step * (1.f / (float)STEPS);
 		glm::vec2 pos = getPointAtT(t);
 		line[step] = sf::Vertex(sf::Vector2f(pos.x, pos.y));
+	}
+
+	window.draw(line.data(), STEPS + 1, sf::LineStrip);
+
+	// render convec hull
+	std::vector<glm::vec2> ctrl_ps({ start.loc, start.ctrl_loc, end.ctrl_loc, end.loc });
+	for (int step = 0; step < 5; step++) {
+		glm::vec2 pos = ctrl_ps[chIndices[step % 4]];
+		line[step] = sf::Vertex(sf::Vector2f(pos.x, pos.y), sf::Color::Blue);
 	}
 
 	window.draw(line.data(), STEPS + 1, sf::LineStrip);
@@ -194,12 +241,22 @@ glm::vec2 Cubic::getNormalAtT(float t, bool cw) {
 	return normal;
 }
 
+void Cubic::getConvexHull() {
+	std::vector<glm::vec2> ctrl_ps({ start.loc, start.ctrl_loc, end.ctrl_loc, end.loc });
+	chIndices = computeConvexHull(ctrl_ps);
+	if (chIndices.size() != 4) {
+		throw std::exception("not 4");
+	}
+}
+
 bool Cubic::intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir) {
-	std::vector<Linear> segs(3);
-	segs.push_back(Linear(BezierPoint(start.loc, false), BezierPoint(start.ctrl_loc, false)));
-	segs.push_back(Linear(BezierPoint(start.ctrl_loc, false), BezierPoint(end.ctrl_loc, false)));
-	segs.push_back(Linear(BezierPoint(end.ctrl_loc, false), BezierPoint(end.loc, false)));
-	for (int i = 0; i < 3; i++) {
+	std::vector<glm::vec2> ctrl_ps({ start.loc, start.ctrl_loc, end.ctrl_loc, end.loc });
+
+	std::vector<Linear> segs(4);
+	for (int i = 0; i < 4; i++) {
+		segs[i] = Linear(BezierPoint(ctrl_ps[chIndices[i]], false), BezierPoint(ctrl_ps[chIndices[(i+1)%4]], false));
+	}
+	for (int i = 0; i < 4; i++) {
 		if (segs[i].intersect(ray_start, ray_dir)) {
 			return true;
 		}

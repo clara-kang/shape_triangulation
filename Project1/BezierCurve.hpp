@@ -13,14 +13,17 @@ public:
 		LINEAR,
 		CUBIC
 	};
-	BezierPoint start;
-	BezierPoint end;
 	BezierCurve() {};
 	BezierCurve(BezierPoint start, BezierPoint end);
 
-	BezierPoint &getStart();
-	BezierPoint &getEnd();
+	const BezierPoint &getStart();
+	const BezierPoint &getEnd();
 	
+	virtual void moveStartPos(glm::vec2 pos);
+	virtual void moveEndPos(glm::vec2 pos);
+	virtual void moveStartCtrl(glm::vec2 pos);
+	virtual void moveEndCtrl(glm::vec2 pos);
+
 	virtual float getLength() = 0;
 	virtual glm::vec2 getPointAtLength(float length) = 0;
 	virtual glm::vec2 getPointAtLength(float length, float &stopt) = 0;
@@ -30,6 +33,8 @@ public:
 	virtual void render(sf::RenderWindow &window) = 0;
 	virtual type getType() = 0;
 protected:
+	BezierPoint start;
+	BezierPoint end;
 	float length = 0;
 	void renderPts(sf::RenderWindow &window);
 };
@@ -39,6 +44,7 @@ public:
 	Linear() {};
 	Linear(BezierPoint start, BezierPoint end);
 	BezierCurve::type getType();
+
 	void render(sf::RenderWindow &window);
 	float getLength();
 	glm::vec2 getPointAtLength(float length);
@@ -54,6 +60,11 @@ class Cubic : public BezierCurve {
 public:
 	Cubic(BezierPoint start, BezierPoint end);
 	BezierCurve::type getType();
+	void moveStartPos(glm::vec2 pos) override;
+	void moveEndPos(glm::vec2 pos) override;
+	void moveStartCtrl(glm::vec2 pos) override;
+	void moveEndCtrl(glm::vec2 pos) override;
+
 	void render(sf::RenderWindow &window);
 	float getLength();
 	glm::vec2 getPointAtLength(float length);
@@ -62,6 +73,10 @@ public:
 	//bool intersect(glm::vec2 ray_start, glm::vec2 ray_dir, glm::vec2 &intrsctn);
 	bool intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir);
 private:
+	// start.loc: 0, start.ctrl_loc: 1, end.ctrl_loc: 2, end.loc: 3, the order of them in the convex hull
+	std::vector<int> chIndices;
 	glm::vec2 getPointAtT(float t);
 	float getLengthAtT(float tstop);
+	// compute convex hull of ctrl points
+	void getConvexHull();
 };

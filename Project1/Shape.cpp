@@ -6,11 +6,11 @@ Shape::Shape(BezierCurve *curve) {
 	curves.push_back(curve);
 };
 
-BezierPoint *Shape::getHead() {
+const BezierPoint *Shape::getHead() {
 	return &(curves[0]->getStart());
 }
 
-BezierPoint *Shape::getTail() {
+const BezierPoint *Shape::getTail() {
 	return &(curves.end()[-1]->getEnd());
 }
 
@@ -48,35 +48,69 @@ void Shape::mergeToTail(Shape *to_merge) {
 	}
 }
 
-// get nb
-BezierPoint *Shape::getNbPoint(BezierPoint *bp) {
-	BezierPoint *nb = NULL;
-	if (bp == getHead() && this->completed) {
-		return getTail();
+//// get nb, for example curve1 end and curve2 start are nbs
+//BezierPoint *Shape::getNbPoint(BezierPoint *bp) {
+//	BezierPoint *nb = NULL;
+//	if (bp == getHead() && this->completed) {
+//		return getTail();
+//	}
+//	else if (bp == getTail() && this->completed) {
+//		return getHead();
+//	}
+//	else if ((bp == getHead() || bp == getTail()) && !this->completed) {
+//		return NULL;
+//	}
+//	else {
+//		for (auto it = curves.begin(); it != curves.end(); ++it) {
+//			if (&(*it)->getEnd() == bp && it != curves.end() - 1) {
+//				nb = &((*(it + 1))->getStart());
+//				break;
+//			}
+//		}
+//		return nb;
+//	}
+//}
+
+BezierCurve *Shape::getNextCurve(BezierCurve *c) {
+	if (c == curves.end()[-1] && this->completed) {
+		return curves[0];
 	}
-	else if (bp == getTail() && this->completed) {
-		return getHead();
-	}
-	else if ((bp == getHead() || bp == getTail()) && !this->completed) {
+	else if (c == curves.end()[-1] && !this->completed) {
 		return NULL;
 	}
 	else {
-		for (auto it = curves.begin(); it != curves.end(); ++it) {
-			if (&(*it)->getEnd() == bp && it != curves.end() - 1) {
-				nb = &((*(it + 1))->getStart());
-				break;
+		for (int i = 0; i < curves.size() - 1; i++) {
+			if (curves[i] == c) {
+				return curves[i + 1];
 			}
 		}
-		return nb;
+		throw std::exception("cannot find curve");
+	}
+}
+
+BezierCurve *Shape::getPrevCurve(BezierCurve *c) {
+	if (c == curves[0] && this->completed) {
+		return curves.end()[-1];
+	}
+	else if (c == curves[0] && !this->completed) {
+		return NULL;
+	}
+	else {
+		for (int i = 1; i < curves.size(); i++) {
+			if (curves[i] == c) {
+				return curves[i - 1];
+			}
+		}
+		throw std::exception("cannot find curve");
 	}
 }
 
 glm::vec2 getV1(BezierCurve *curve) {
 	if (curve->getType() == BezierCurve::type::CUBIC) {
-		return curve->start.ctrl_loc - curve->start.loc;
+		return curve->getStart().ctrl_loc - curve->getStart().loc;
 	}
 	else {
-		return curve->end.loc - curve->start.loc;
+		return curve->getEnd().loc - curve->getStart().loc;
 	}
 }
 
@@ -87,9 +121,9 @@ bool Shape::isClockWise() {
 		glm::vec2 lastV;
 		// cubic curves approx by ctrl poitns
 		if (curve->getType() == BezierCurve::type::CUBIC) {
-			glm::vec2 v1 = curve->start.ctrl_loc - curve->start.loc;
-			glm::vec2 v2 = curve->end.ctrl_loc - curve->start.ctrl_loc;
-			glm::vec2 v3 = curve->end.loc - curve->end.ctrl_loc;
+			glm::vec2 v1 = curve->getStart().ctrl_loc - curve->getStart().loc;
+			glm::vec2 v2 = curve->getEnd().ctrl_loc - curve->getStart().ctrl_loc;
+			glm::vec2 v3 = curve->getEnd().loc - curve->getEnd().ctrl_loc;
 			// accumulate winding number
 			winding_num += getSignedAngle(v1, v2);
 			winding_num += getSignedAngle(v2, v3);
@@ -97,7 +131,7 @@ bool Shape::isClockWise() {
 		}
 		else {
 			// linear curve
-			lastV = curve->end.loc - curve->start.loc;
+			lastV = curve->getEnd().loc - curve->getStart().loc;
 		}
 		glm::vec2 nextV = getV1(curves[(i + 1) % curves.size()]);
 		winding_num += getSignedAngle(lastV, nextV);

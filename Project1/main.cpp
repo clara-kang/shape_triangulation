@@ -22,7 +22,7 @@ int BUTTON_LEN = 50;
 int MENU_WIDTH = 25;
 float DETECTION_RANGE = 12; // in pixel
 float PS_Lm = 20; // distance between points
-
+bool moveStart; // move start of end of clicked curve
 sf::Text buttonText;
 
 // all the curves
@@ -32,7 +32,7 @@ std::shared_ptr<BezierPoint> loneBP;
 // last mouse clicked position
 glm::vec2 lastClickedPos;
 // chosen bezier point to change position
-BezierPoint* clickedBp;
+//const BezierPoint* clickedBp;
 // chosen curve
 BezierCurve* clickedCurve;
 // the shapes
@@ -72,13 +72,13 @@ bool isMenuClicked(int y) {
 }
 
 // helper for isHandleClicked
-bool isThisHandleClicked(BezierPoint &bp, glm::vec2 clickedPos) {
+bool isThisHandleClicked(const BezierPoint &bp, glm::vec2 clickedPos) {
 	float clickPos2Handle = glm::distance(bp.ctrl_loc, clickedPos);
 	return (clickPos2Handle < DETECTION_RANGE);
 }
 
 // helper for isBPClicked
-bool isThisBPClicked(BezierPoint &bp, glm::vec2 clickedPos) {
+bool isThisBPClicked(const BezierPoint &bp, glm::vec2 clickedPos) {
 	float clickPos2BP = glm::distance(bp.loc, clickedPos);
 	return (clickPos2BP < DETECTION_RANGE);
 }
@@ -86,14 +86,18 @@ bool isThisBPClicked(BezierPoint &bp, glm::vec2 clickedPos) {
 // check if any bezier point handle clicked
 bool isHandleClicked(glm::vec2 clickedPos) {
 	for (std::vector<BezierCurve*>::iterator it = curvesSoup.begin(); it != curvesSoup.end(); ++it) {
-		BezierPoint &sBp = (*it)->getStart();
-		BezierPoint &eBp = (*it)->getEnd();
+		const BezierPoint &sBp = (*it)->getStart();
+		const BezierPoint &eBp = (*it)->getEnd();
 		if (sBp.isCubic() && isThisHandleClicked(sBp, clickedPos)) {
-			clickedBp = &((*it)->start);
+			//clickedBp = &sBp;
+			clickedCurve = *it;
+			moveStart = true;
 			return true;
 		}
 		else if (eBp.isCubic() && isThisHandleClicked(eBp, clickedPos)) {
-			clickedBp = &((*it)->end);
+			//clickedBp = &eBp;
+			clickedCurve = *it;
+			moveStart = false;
 			return true;
 		}
 	}
@@ -104,13 +108,15 @@ bool isHandleClicked(glm::vec2 clickedPos) {
 bool isBPClicked(glm::vec2 clickedPos) {
 	for (std::vector<BezierCurve*>::iterator it = curvesSoup.begin(); it != curvesSoup.end(); ++it) {
 		if ( isThisBPClicked((*it)->getStart(), clickedPos)) {
-			clickedBp = &((*it)->start);
+			//clickedBp = &((*it)->getStart());
 			clickedCurve = (*it);
+			moveStart = true;
 			return true;
 		}
 		else if (isThisBPClicked((*it)->getEnd(), clickedPos)) {
-			clickedBp = &((*it)->end);
+			//clickedBp = &((*it)->getEnd());
 			clickedCurve = (*it);
+			moveStart = false;
 			return true;
 		}
 	}
@@ -131,13 +137,20 @@ Shape *getShapeWithCurve(BezierCurve *curve) {
 
 // only fuse start to end
 bool closeToShape(Shape **touchedShape) {
-	bool moveStart = ( clickedBp == &clickedCurve->getStart());
+	//moveStart = ( clickedBp == &clickedCurve->getStart());
+	glm::vec2 clickedBpPos;
+	if (moveStart) {
+		clickedBpPos = clickedCurve->getStart().loc;
+	}
+	else {
+		clickedBpPos = clickedCurve->getEnd().loc;
+	}
 	for (std::vector<Shape*>::iterator it = shapesSoup.begin(); it != shapesSoup.end(); ++it) {
 		// if the shape already forms a loop, cannot merge with it
 		if ((*it)->completed) {
 			continue;
 		}
-		BezierPoint *bp_to_check;
+		const BezierPoint *bp_to_check;
 		// move start of curve, check curve start close to the tail of the shape
 		if (moveStart) {
 			bp_to_check = (*it)->getTail();
@@ -146,7 +159,7 @@ bool closeToShape(Shape **touchedShape) {
 		else {
 			bp_to_check = (*it)->getHead();
 		}
-		if (glm::distance(clickedBp->loc, bp_to_check->loc) < DETECTION_RANGE) {
+		if (glm::distance(clickedBpPos, bp_to_check->loc) < DETECTION_RANGE) {
 			*touchedShape = *it;
 			return true;
 		}
@@ -167,16 +180,15 @@ void mergeShape(Shape *touchedShape) {
 			break;
 		}
 	}
-	bool moveStart = (clickedBp == &clickedCurve->getStart());
 	if (shape_to_merge != NULL) {
 		if (moveStart) {
 			// snap
-			clickedBp->loc = touchedShape->getTail()->loc;
+			clickedCurve->moveStartPos(touchedShape->getTail()->loc);
 			touchedShape->mergeToTail(shape_to_merge);
 		}
 		else {
 			// snap
-			clickedBp->loc = touchedShape->getHead()->loc;
+			clickedCurve->moveEndPos(touchedShape->getHead()->loc);
 			touchedShape->mergeToHead(shape_to_merge);
 		}
 		// delete the merged shape except when connecting head and tail of one shape
@@ -236,18 +248,37 @@ int main()
 			else {
 				sf::Vector2i position = sf::Mouse::getPosition(window);
 				if (drawMode == MOVE_CTRL) {
-					clickedBp->ctrl_loc = glm::vec2(position.x, position.y);
+					if (moveStart) {
+						clickedCurve->moveStartCtrl(glm::vec2(position.x, position.y));
+					}
+					else {
+						clickedCurve->moveEndCtrl(glm::vec2(position.x, position.y));
+					}
 				}
 				// move point
 				else {
 					// move point clicked
-					clickedBp->moveTo(glm::vec2(position.x, position.y));
+					if (moveStart) {
+						clickedCurve->moveStartPos(glm::vec2(position.x, position.y));
+					}
+					else {
+						clickedCurve->moveEndPos(glm::vec2(position.x, position.y));
+					}
 					// get shape curve is in
 					Shape *shape = getShapeWithCurve(clickedCurve);
 					// check if there is a nb in shape that needs to be moved together
-					BezierPoint *bp_together = shape->getNbPoint(clickedBp);
-					if (bp_together != NULL) {
-						bp_together->moveTo(glm::vec2(position.x, position.y));
+					//BezierPoint *bp_together = shape->getNbPoint(clickedBp);
+					if (moveStart) {
+						BezierCurve *nb_curve = shape->getPrevCurve(clickedCurve);
+						if (nb_curve != NULL) { 
+							nb_curve->moveEndPos(glm::vec2(position.x, position.y)); 
+						}
+					}
+					else {
+						BezierCurve *nb_curve = shape->getNextCurve(clickedCurve);
+						if (nb_curve != NULL) {
+							nb_curve->moveStartPos(glm::vec2(position.x, position.y));
+						}
 					}
 
 					Shape *cShape = NULL;

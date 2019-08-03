@@ -16,9 +16,9 @@ public:
 	// the curves that the shape contains
 	std::vector<BezierCurve *> curves;
 	
-	BezierPoint *getHead();
+	const BezierPoint *getHead();
 
-	BezierPoint *getTail();
+	const BezierPoint *getTail();
 
 	// check whether the given curve belongs to shape
 	bool curveInShape(BezierCurve *curve);
@@ -36,5 +36,10 @@ public:
 	bool pInShape(glm::vec2 &ploc);
 
 	// get nb
-	BezierPoint *getNbPoint(BezierPoint *bp);
+	//BezierPoint *getNbPoint(BezierPoint *bp);
+
+	// get next curve
+	BezierCurve *getNextCurve(BezierCurve *c);
+	// get previous curve
+	BezierCurve *getPrevCurve(BezierCurve *c);
 };
