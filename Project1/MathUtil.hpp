@@ -61,15 +61,7 @@ inline std::vector<int> computeConvexHull(std::vector<glm::vec2> points) {
 				// angle between 0 and 2Pi
 				float angle = fmod(getSignedAngle(lastVector, points[j] - lastP) + 2.f * PI, 2.f * PI);
 				float dist = glm::distance(points[j], lastP);
-				bool cond1 = angle < smlstAngle;
-				// or collinear but closest
-				bool cond2 = (angle == smlstAngle && dist <= smlstDist);
-				// not already on CH
-				//bool cond3 = std::find(chIndices.begin(), chIndices.end(), j) == chIndices.end();
-				if (cond2) {
-					std::cout << "collinear" << std::endl;
-				}
-				if ((cond1 || cond2)) {
+				if (angle < smlstAngle) {
 					endPIndex = j;
 					smlstAngle = angle;
 					smlstDist = dist;

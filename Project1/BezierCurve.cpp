@@ -152,24 +152,25 @@ glm::vec2 Cubic::getPointAtT(float t) {
 void Cubic::render(sf::RenderWindow &window) {
 	renderPts(window);
 	// render the curve
-	std::vector<sf::Vertex> line(STEPS + 1);
+	std::vector<sf::Vertex> cline(STEPS + 1);
 
 	for (int step = 0; step < STEPS + 1; step++) {
 		float t = step * (1.f / (float)STEPS);
 		glm::vec2 pos = getPointAtT(t);
-		line[step] = sf::Vertex(sf::Vector2f(pos.x, pos.y));
+		cline[step] = sf::Vertex(sf::Vector2f(pos.x, pos.y));
 	}
 
-	window.draw(line.data(), STEPS + 1, sf::LineStrip);
+	window.draw(cline.data(), STEPS + 1, sf::LineStrip);
 
 	// render convec hull
+	std::vector<sf::Vertex> chline(chIndices.size()+1);
 	std::vector<glm::vec2> ctrl_ps({ start.loc, start.ctrl_loc, end.ctrl_loc, end.loc });
-	for (int step = 0; step < 5; step++) {
-		glm::vec2 pos = ctrl_ps[chIndices[step % 4]];
-		line[step] = sf::Vertex(sf::Vector2f(pos.x, pos.y), sf::Color::Blue);
+	for (int step = 0; step < chIndices.size()+1; step++) {
+		glm::vec2 pos = ctrl_ps[chIndices[step % chIndices.size()]];
+		chline[step] = sf::Vertex(sf::Vector2f(pos.x, pos.y), sf::Color::Blue);
 	}
 
-	window.draw(line.data(), STEPS + 1, sf::LineStrip);
+	window.draw(chline.data(), chIndices.size()+1, sf::LineStrip);
 }
 
 float Cubic::getLength() {
@@ -244,19 +245,16 @@ glm::vec2 Cubic::getNormalAtT(float t, bool cw) {
 void Cubic::getConvexHull() {
 	std::vector<glm::vec2> ctrl_ps({ start.loc, start.ctrl_loc, end.ctrl_loc, end.loc });
 	chIndices = computeConvexHull(ctrl_ps);
-	if (chIndices.size() != 4) {
-		throw std::exception("not 4");
-	}
 }
 
 bool Cubic::intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir) {
 	std::vector<glm::vec2> ctrl_ps({ start.loc, start.ctrl_loc, end.ctrl_loc, end.loc });
 
-	std::vector<Linear> segs(4);
-	for (int i = 0; i < 4; i++) {
+	std::vector<Linear> segs(chIndices.size());
+	for (int i = 0; i < chIndices.size(); i++) {
 		segs[i] = Linear(BezierPoint(ctrl_ps[chIndices[i]], false), BezierPoint(ctrl_ps[chIndices[(i+1)%4]], false));
 	}
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < chIndices.size(); i++) {
 		if (segs[i].intersect(ray_start, ray_dir)) {
 			return true;
 		}
