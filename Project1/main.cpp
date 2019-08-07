@@ -1,3 +1,4 @@
+#pragma once
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 #include <iostream>
@@ -10,6 +11,7 @@
 #include "BezierCurve.hpp"
 #include "Shape.hpp"
 #include "PointUtil.hpp"
+#include "Triangulation.hpp"
 
 enum CurveMode {LINEAR, CUBIC};
 enum DrawMode {ON, OFF, MOVE_CTRL, MOVE_BP};
@@ -294,6 +296,9 @@ int main()
 						pUtil->computePm();
 						pointUtils.push_back(pUtil);
 						shape2Points[cShape] = pUtil;
+						std::vector<glm::vec2> pointPos = pUtil->points2pos();
+						window.clear();
+						Triangulation::triangulate(&window, pointPos);
 					}
 				}
 				// redraw

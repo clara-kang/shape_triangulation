@@ -15,7 +15,7 @@ public:
 	void render(sf::RenderWindow &window);
 	//delete later
 	void passWindow(sf::RenderWindow *window);
-
+	std::vector<glm::vec2> points2pos();
 private:
 	void computeIPoints();
 	void mergePbs();

@@ -43,6 +43,17 @@ void PointUtil::computePm() {
 	computeIPoints();
 }
 
+std::vector<glm::vec2> PointUtil::points2pos() {
+	if (Pm.size() == 0) {
+		computePm();
+	}
+	std::vector<glm::vec2> positions(Pm.size());
+	for (int i = 0; i < Pm.size(); i++) {
+		positions[i] = Pm[i]->loc;
+	}
+	return positions;
+}
+
 void PointUtil::rmPfromPmPw(Point *P) {
 	auto it = std::find(Pm.begin(), Pm.end(), P);
 	auto it_w = std::find(Pw.begin(), Pw.end(), P);
