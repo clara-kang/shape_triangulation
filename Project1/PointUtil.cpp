@@ -222,25 +222,25 @@ bool PointUtil::mergeWPm(Point *P, Point *Pres) {
 	// no point within Lm distance
 	if (!needMerge) {
 		// copy content
-		std::swap(*Pres, *P);
-		Pm.push_back(Pres);
+		*Pres = *P;
 		return true;
 	}
 	// closeP is within Lm distance
 	else if (needMerge && mergeTwoPoints(P, closeP, Pres)){
 		while (true) {
 			needMerge = getClosestInPm(Pres, &closeP);
-			if ( needMerge && mergeTwoPoints(Pres, closeP, Pres)) {
-				continue;
+			if ( needMerge ) {
+				if (mergeTwoPoints(Pres, closeP, Pres)) {
+					break;
+				}
 			}
 			else {
+				// should the merged point be added to Pw??
+				Point *mergedPoint = new Point(*Pres);
+				Pm.push_back(mergedPoint);
 				break;
 			}
 		}
-		// should the merged point be added to Pw??
-		Point *mergedPoint = new Point(*Pres);
-		Pm.push_back(mergedPoint);
-		//return true;
 		return false;
 	}
 	return false;
@@ -253,15 +253,13 @@ void PointUtil::computeIPoints() {
 		getPflr(point, &Pf, &Pl, &Pr);
 		std::vector<Point> Pnbs({ Pf, Pl, Pr });
 		for (int i = 0; i < 3; i++) {
-			Point *Pres = new Point();
+			Point Pres;
 			// check Pf, Pl, Pr outside of shape
 			// if merging with Pm results in Pres
-			if ( shape->pInShape(Pnbs[i].loc) && mergeWPm(&Pnbs[i], Pres)) {
-				Pm.push_back(Pres);
-				Pw.push_back(Pres);
-			}
-			else {
-				delete Pres;
+			if ( shape->pInShape(Pnbs[i].loc) && mergeWPm(&Pnbs[i], &Pres)) {
+				Point *point_to_add = new Point(Pres);
+				Pm.push_back(point_to_add);
+				Pw.push_back(point_to_add);
 			}
 		}
 		Pw.erase(Pw.begin());
