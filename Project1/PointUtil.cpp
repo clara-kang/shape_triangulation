@@ -49,7 +49,7 @@ std::vector<glm::vec2> PointUtil::points2pos() {
 	}
 	std::vector<glm::vec2> positions(Pm.size());
 	for (int i = 0; i < Pm.size(); i++) {
-		positions[i] = Pm[i]->loc;
+		positions[i] = glm::vec2(Pm[i]->loc.x, -Pm[i]->loc.y);
 	}
 	return positions;
 }
