@@ -88,7 +88,9 @@ bool segIntersectMiddle(glm::vec2 seg1_start, glm::vec2 seg1_end,
 	glm::vec2 t = glm::inverse(A) * B;
 	bool t0_middle = t[0] > EPSILON && t[0] < 1.f - EPSILON;
 	bool t1_middle = t[1] > EPSILON && t[1] < 1.f - EPSILON;
-	if (t0_middle && t1_middle) {
+	bool t0_touch = t[0] >= EPSILON && t[0] <= 1.f - EPSILON;
+	bool t1_touch = t[1] >= EPSILON && t[1] <= 1.f - EPSILON;
+	if ((t0_middle && t1_touch) || (t1_middle && t0_touch)) {
 		return true;
 	}
 	return false;

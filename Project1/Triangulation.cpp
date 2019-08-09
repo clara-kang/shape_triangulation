@@ -7,24 +7,25 @@ static float PI = 3.1415926f;
 static float BIG = 500.f;
 static float EPSILON(1e-4);
 
+void Triangulation::render(sf::RenderWindow *window, CONN_T trgltn, const PS_T &P) {
+	for (auto it = P.begin(); it != P.end(); ++it) {
+		Triangulation::renderPoint(window, *it, sf::Color::Green);
+	}
+	renderTrngltn(window, trgltn, P);
+}
+
 void Triangulation::render(sf::RenderWindow *window, std::vector<int> indices, CONN_T trgltn, const PS_T &P) {
 	float POINT_RADIUS = 2.f;
 	for (int i = 0; i < indices.size(); i++) {
-		sf::Vector2f pt_loc(P[indices[i]].x - POINT_RADIUS / 2.f, -P[indices[i]].y - POINT_RADIUS / 2.f);
-		sf::CircleShape circle(POINT_RADIUS);
-		circle.setFillColor(sf::Color::Green);
-		circle.setPosition(pt_loc);
-		window->draw(circle);
+		//sf::Vector2f pt_loc(P[indices[i]].x - POINT_RADIUS / 2.f, -P[indices[i]].y - POINT_RADIUS / 2.f);
+		//sf::CircleShape circle(POINT_RADIUS);
+		//circle.setFillColor(sf::Color::Green);
+		//circle.setPosition(pt_loc);
+		//window->draw(circle);
+		Triangulation::renderPoint(window, P[indices[i]], sf::Color::Green);
 	}
 
-	for (auto it = trgltn.begin(); it != trgltn.end(); ++it) {
-		sf::Vertex line[] =
-		{
-			sf::Vertex(sf::Vector2f(P[it->first].x, -P[it->first].y)),
-			sf::Vertex(sf::Vector2f(P[it->second].x, -P[it->second].y))
-		};
-		window->draw(line, 2, sf::Lines);
-	}
+	renderTrngltn(window, trgltn, P);
 }
 
 void Triangulation::renderPoint(sf::RenderWindow *window, glm::vec2 loc, sf::Color col) {
@@ -37,12 +38,23 @@ void Triangulation::renderPoint(sf::RenderWindow *window, glm::vec2 loc, sf::Col
 	window->draw(circle);
 }
 
-void Triangulation::triangulate(sf::RenderWindow *window, const PS_T &P) {
+void Triangulation::renderTrngltn(sf::RenderWindow *window, CONN_T trgltn, const PS_T &P){
+	for (auto it = trgltn.begin(); it != trgltn.end(); ++it) {
+		sf::Vertex line[] =
+		{
+			sf::Vertex(sf::Vector2f(P[it->first].x, -P[it->first].y)),
+			sf::Vertex(sf::Vector2f(P[it->second].x, -P[it->second].y))
+		};
+		window->draw(line, 2, sf::Lines);
+	}
+}
+
+CONN_T Triangulation::triangulate(sf::RenderWindow *window, const PS_T &P) {
 	std::vector<int> indices(P.size());
 	for (int i = 0; i < P.size(); i++) {
 		indices[i] = i;
 	}
-	triangulateRec(window, indices, P);
+	return triangulateRec(window, indices, P);
 }
 
 CONN_T Triangulation::triangulateRec(sf::RenderWindow *window, std::vector<int> indices, const PS_T &P) {
@@ -156,21 +168,21 @@ int getLeftRightCandidate(bool right, int other_last_index, int this_last_index,
 		int valid_right_cand = -1;
 		// for each candidate, find center of circle left-base, right-base, cand
 		for (int i = 0; i < angles_w_base.size(); i++) {
-			bool angle_valid = angles_w_base[i].second > EPSILON && angles_w_base[i].second < PI - EPSILON;
 			// last candidate
 			if (i == angles_w_base.size() - 1) {
+				bool angle_valid = angles_w_base[i].second > EPSILON && angles_w_base[i].second < PI - EPSILON;
 				if (angle_valid) {
 					valid_right_cand = angles_w_base[i].first;
 				}
 				break;
 			}
-			// angle bigger than 180, no valid candidate
-			if (angles_w_base[i].second >= PI - EPSILON) {
-				break;
-			}
 			// same line, continue
-			else if (angles_w_base[i].second < EPSILON) {
+			if (angles_w_base[i].second < EPSILON || angles_w_base[i].second > 2.f * PI - EPSILON) {
 				continue;
+			}
+			// angle bigger than 180, no valid candidate
+			else if (angles_w_base[i].second >= PI - EPSILON) {
+				break;
 			}
 			int cand_index = angles_w_base[i].first;
 			const glm::vec2 &cand = P[cand_index];

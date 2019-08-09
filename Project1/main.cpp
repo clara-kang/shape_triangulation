@@ -27,6 +27,11 @@ float PS_Lm = 20; // distance between points
 bool moveStart; // move start of end of clicked curve
 sf::Text buttonText;
 
+struct pointAndTriangles {
+	PS_T pointSet;
+	CONN_T triangulation;
+};
+
 // all the curves
 std::vector<BezierCurve*> curvesSoup;
 // unfinished curve
@@ -43,6 +48,8 @@ std::vector<Shape*> shapesSoup;
 std::vector<PointUtil*> pointUtils;
 // the map mapping completed shapes to pointUtils
 std::map<Shape *, PointUtil*> shape2Points;
+// the triangulations
+std::vector<pointAndTriangles> trngltns;
 
 void drawMenuBar(sf::RenderWindow &window, sf::Font &font) {
 	float window_width = window.getSize().x;
@@ -215,10 +222,17 @@ void drawPSets(sf::RenderWindow &window) {
 	}
 }
 
+void drawTrngltns(sf::RenderWindow &window) {
+	for (auto it = trngltns.begin(); it != trngltns.end(); ++it) {
+		Triangulation::render(&window, it->triangulation, it->pointSet);
+	}
+}
+
 void redrawEvrything(sf::RenderWindow &window, sf::Font &font) {
 	drawMenuBar(window, font);
 	drawCurves(window);
-	drawPSets(window);
+	//drawPSets(window);
+	drawTrngltns(window);
 	window.display();
 }
 
@@ -298,7 +312,8 @@ int main()
 						shape2Points[cShape] = pUtil;
 						std::vector<glm::vec2> pointPos = pUtil->points2pos();
 						window.clear();
-						Triangulation::triangulate(&window, pointPos);
+						CONN_T trgltn = Triangulation::triangulate(&window, pointPos);
+						trngltns.push_back(pointAndTriangles{ pointPos, trgltn });
 					}
 				}
 				// redraw
