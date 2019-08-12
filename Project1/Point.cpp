@@ -3,13 +3,14 @@
 float PPOINT_RADIUS = 2.f;
 float NORMAL_LENGTH = 10.f;
 
-Point::Point(glm::vec2 loc, Type type) {
-	this->loc = loc;
-	this->type = type;
-	this->normal = glm::vec2(0.f);
+Point::Point(glm::vec2 loc, Type type) :
+	loc (loc),
+	type (type),
+	normal (glm::vec2(0.f)) {
 }
 
-Point::Point(glm::vec2 loc, glm::vec2 normal, Type type) : Point(loc, type) {
+Point::Point(glm::vec2 loc, glm::vec2 normal, Type type) : 
+	Point(loc, type) {
 	this->normal = normal;
 }
 

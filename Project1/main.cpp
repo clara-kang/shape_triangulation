@@ -3,6 +3,8 @@
 #include <iostream>
 #include <exception>
 #include <vector>
+#include <set>
+#include <array>
 #include <memory>
 #include <glm/glm.hpp>
 #include <map>
@@ -10,6 +12,7 @@
 #include "BezierCurve.hpp"
 #include "Shape.hpp"
 #include "PointUtil.hpp"
+#include "MathUtil.hpp"
 
 enum Mode {SELECT, DRAW};
 enum CurveMode {LINEAR, CUBIC};
@@ -40,6 +43,8 @@ glm::vec2 lastClickedPos;
 //const BezierPoint* clickedBp;
 // chosen curve
 BezierCurve* clickedCurve;
+//selected curves;
+std::set<BezierCurve*> selectedCurves;
 // the shapes
 std::vector<Shape*> shapesSoup;
 // the point sets
@@ -232,9 +237,69 @@ void mergeShape(Shape *touchedShape) {
 	}
 }
 
+void intrsctCurves(std::array<glm::vec2, 4> corners) {
+	glm::vec2 ray[4];
+	float t;
+	for (int i = 0; i < 4; i++) {
+		ray[i] = corners[(i + 1) % 4] - corners[i];
+	}
+	// check which curve selected
+	for (auto it = curvesSoup.begin(); it != curvesSoup.end(); ++it) {
+		BezierCurve *c = *it;
+		for (int i = 0; i < 4; i++) {
+			if (c->intersect(corners[i], ray[i], t) && t < 1.f) {
+				selectedCurves.insert(c);
+				break;
+			}
+		}
+	}
+}
+
+bool pointWithin(glm::vec2 point, std::array<glm::vec2, 4> corners) {
+	bool signs[4];
+	for (int i = 0; i < 4; i++) {
+		glm::vec2 ray = corners[(i + 1) % 4] - corners[i];
+		glm::vec2 toPoint = point - corners[i];
+		signs[i] = getSignedAngle(ray, toPoint) > 0;
+	}
+	// check if all sign same
+	for (int i = 0; i < 3; i++) {
+		if (!(signs[i] && signs[i + 1])) {
+			return false;
+		}
+	}
+	return true;
+
+}
+// check if curve within box
+void encloseCurves(std::array<glm::vec2, 4> corners) {
+	for (auto it = curvesSoup.begin(); it != curvesSoup.end(); ++it) {
+		BezierCurve *c = *it;
+		bool contain_start = pointWithin(c->getStart().loc, corners);
+		bool contain_end = pointWithin(c->getEnd().loc, corners);
+		if (contain_start && contain_end) {
+			selectedCurves.insert(c);
+		}
+	}
+}
+
+void selectCurves() {
+	std::array<glm::vec2, 4> corners;
+	corners[0] = glm::vec2(selectionRect.getPosition().x, selectionRect.getPosition().y);
+	corners[1] = glm::vec2(corners[0].x + selectionRect.getSize().x, corners[0].y);
+	corners[2] = glm::vec2(corners[1].x, corners[1].y + selectionRect.getSize().y);
+	corners[3] = glm::vec2(corners[0].x, corners[0].y + selectionRect.getSize().y);
+
+	intrsctCurves(corners);
+	encloseCurves(corners);
+}
+
 void drawCurves(sf::RenderWindow &window) {
 	for (std::vector<BezierCurve*>::iterator it = curvesSoup.begin(); it != curvesSoup.end(); ++it) {
 		(*it)->render(window);
+	}
+	for (auto it = selectedCurves.begin(); it != selectedCurves.end(); ++it) {
+		(*it)->renderSelected(window);
 	}
 }
 
@@ -245,7 +310,7 @@ void drawPSets(sf::RenderWindow &window) {
 }
 
 void drawSelectBox(sf::RenderWindow &window) {
-	if (mode == SELECT) {
+	if (selecting) {
 		window.draw(selectionRect);
 	}
 }
@@ -283,18 +348,19 @@ int main()
 		// if dragging
 		if (mode == SELECT && selecting) {
 			if (!sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
-				// check if merge shape
 				selecting = false;
+				// check which curve selected
+				selectCurves();
 			}
 			else {
 				sf::Vector2i position = sf::Mouse::getPosition(window);
 				int selectBoxLen = position.x - selectionRect.getPosition().x;
 				int selectBoxWidth = position.y - selectionRect.getPosition().y;
 				selectionRect.setSize(sf::Vector2f(selectBoxLen, selectBoxWidth));
-				// redraw
-				window.clear();
-				redrawEvrything(window, font);
 			}
+			// redraw
+			window.clear();
+			redrawEvrything(window, font);
 		}
 		else if (drawMode == MOVE_CTRL || drawMode == MOVE_BP) {
 			 // mouse released

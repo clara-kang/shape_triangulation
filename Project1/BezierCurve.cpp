@@ -64,7 +64,7 @@ glm::vec2 Linear::getPointAtLength(float stoplength, float &stopt) {
 }
 
 // assume ray_dir is normalized
-bool Linear::intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir, glm::vec2 &intrsctn) {
+bool Linear::intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir, glm::vec2 &intrsctn, float &dist) {
 	// normalized direction vector from start to end
 	glm::vec2 c_dir = end.loc - start.loc;
 	// lhs of the equation
@@ -77,6 +77,7 @@ bool Linear::intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir, glm::vec2 &intr
 	float t = X.y;
 	if (X.x > 0 && t >= 0.f && t <= 1.f) {
 		intrsctn = start.loc + t * c_dir;
+		dist = X.x;
 		return true;
 	}
 	return false;
@@ -84,8 +85,18 @@ bool Linear::intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir, glm::vec2 &intr
 
 bool Linear::intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir) {
 	glm::vec2 intrsctn;
-	return intersect(ray_start, ray_dir, intrsctn);
+	float dist;
+	return intersect(ray_start, ray_dir, intrsctn, dist);
 }
+
+bool Linear::intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir, float &dist) {
+	glm::vec2 intrsctn;
+	float d;
+	bool intrsect = intersect(ray_start, ray_dir, intrsctn, d);
+	dist = d;
+	return intrsect;
+}
+
 
 glm::vec2 Linear::getNormalAtT(float t, bool cw) {
 	// normal not defined
@@ -112,6 +123,17 @@ void Linear::render(sf::RenderWindow &window) {
 	{
 		sf::Vertex(sf::Vector2f(start.loc.x, start.loc.y)),
 		sf::Vertex(sf::Vector2f(end.loc.x, end.loc.y))
+	};
+	window.draw(line, 2, sf::Lines);
+}
+
+void Linear::renderSelected(sf::RenderWindow &window) {
+	renderPts(window);
+
+	sf::Vertex line[] =
+	{
+		sf::Vertex(sf::Vector2f(start.loc.x, start.loc.y), sf::Color(255, 187, 0, 255)),
+		sf::Vertex(sf::Vector2f(end.loc.x, end.loc.y), sf::Color(255, 187, 0, 255))
 	};
 	window.draw(line, 2, sf::Lines);
 }
@@ -148,6 +170,19 @@ glm::vec2 Cubic::getPointAtT(float t) {
 	glm::vec2 pos = pow(1.f - t, 3.f) * start.loc + 3.f * pow(1.f - t, 2.f) * t * start.ctrl_loc
 		+ 3.f * (1.f - t) * pow(t, 2.f) * end.ctrl_loc + pow(t, 3.f) * end.loc;
 	return pos;
+}
+
+void Cubic::renderSelected(sf::RenderWindow &window) {
+	// render the curve
+	std::vector<sf::Vertex> cline(STEPS + 1);
+
+	for (int step = 0; step < STEPS + 1; step++) {
+		float t = step * (1.f / (float)STEPS);
+		glm::vec2 pos = getPointAtT(t);
+		cline[step] = sf::Vertex(sf::Vector2f(pos.x, pos.y), sf::Color(255, 187, 0, 255));
+	}
+
+	window.draw(cline.data(), STEPS + 1, sf::LineStrip);
 }
 
 void Cubic::render(sf::RenderWindow &window) {
@@ -248,17 +283,32 @@ void Cubic::getConvexHull() {
 	chIndices = computeConvexHull(ctrl_ps);
 }
 
-bool Cubic::intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir) {
+bool Cubic::intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir, float &dist) {
 	std::vector<glm::vec2> ctrl_ps({ start.loc, start.ctrl_loc, end.ctrl_loc, end.loc });
 
 	std::vector<Linear> segs(chIndices.size());
 	for (int i = 0; i < chIndices.size(); i++) {
-		segs[i] = Linear(BezierPoint(ctrl_ps[chIndices[i]], false), BezierPoint(ctrl_ps[chIndices[(i+1)%4]], false));
+		segs[i] = Linear(BezierPoint(ctrl_ps[chIndices[i]], false), BezierPoint(ctrl_ps[chIndices[(i + 1) % 4]], false));
 	}
 	for (int i = 0; i < chIndices.size(); i++) {
 		if (segs[i].intersect(ray_start, ray_dir)) {
-			return true;
+			glm::vec2 lastPos = start.loc;
+			for (int step = 0; step < STEPS + 1; step++) {
+				float t = step * (1.f / (float)STEPS);
+				glm::vec2 pos = getPointAtT(t);
+
+				Linear seg(BezierPoint(lastPos, false), BezierPoint(pos, false));
+				if (seg.intersect(ray_start, ray_dir, dist)) {
+					return true;
+				}
+				lastPos = pos;
+			}
 		}
 	}
+
 	return false;
+}
+bool Cubic::intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir) {
+	float dist;
+	return intersect(ray_start, ray_dir, dist);
 }

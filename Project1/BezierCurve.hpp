@@ -30,7 +30,9 @@ public:
 	virtual glm::vec2 getNormalAtT(float t, bool cw) = 0;
 	//virtual bool intersect(glm::vec2 ray_start, glm::vec2 ray_dir, glm::vec2 &intrsctn) = 0;
 	virtual bool intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir) = 0;
+	virtual bool intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir, float &dist) = 0;
 	virtual void render(sf::RenderWindow &window) = 0;
+	virtual void renderSelected(sf::RenderWindow &window) = 0;
 	virtual type getType() = 0;
 protected:
 	BezierPoint start;
@@ -46,15 +48,17 @@ public:
 	BezierCurve::type getType();
 
 	void render(sf::RenderWindow &window);
+	void renderSelected(sf::RenderWindow &window);
 	float getLength();
 	glm::vec2 getPointAtLength(float length);
 	glm::vec2 getPointAtLength(float length, float &stopt);
 	glm::vec2 getNormalAtT(float t, bool cw);
-	bool intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir, glm::vec2 &intrsctn);
+	bool intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir, glm::vec2 &intrsctn, float &dist);
 	bool intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir);
+	bool intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir, float &dist);
 private:
 	bool hasNormal = false;
-	glm::vec2 normal;
+	glm::vec2 normal = glm::vec2(0.f);
 };
 
 class Cubic : public BezierCurve {
@@ -67,12 +71,14 @@ public:
 	void moveEndCtrl(glm::vec2 pos) override;
 
 	void render(sf::RenderWindow &window);
+	void renderSelected(sf::RenderWindow &window);
 	float getLength();
 	glm::vec2 getPointAtLength(float length);
 	glm::vec2 getPointAtLength(float length, float &stopt);
 	glm::vec2 getNormalAtT(float t, bool cw);
 	//bool intersect(glm::vec2 ray_start, glm::vec2 ray_dir, glm::vec2 &intrsctn);
 	bool intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir);
+	bool intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir, float &dist);
 private:
 	// start.loc: 0, start.ctrl_loc: 1, end.ctrl_loc: 2, end.loc: 3, the order of them in the convex hull
 	std::vector<int> chIndices;
