@@ -256,8 +256,19 @@ bool Cubic::intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir) {
 	}
 	for (int i = 0; i < chIndices.size(); i++) {
 		if (segs[i].intersect(ray_start, ray_dir)) {
-			return true;
+			glm::vec2 lastPos = start.loc;
+			for (int step = 0; step < STEPS + 1; step++) {
+				float t = step * (1.f / (float)STEPS);
+				glm::vec2 pos = getPointAtT(t);
+
+				Linear seg(BezierPoint(lastPos, false), BezierPoint(pos, false));
+				if (seg.intersect(ray_start, ray_dir)) {
+					return true;
+				}
+				lastPos = pos;
+			}
 		}
 	}
+
 	return false;
 }

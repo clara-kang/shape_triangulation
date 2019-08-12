@@ -53,7 +53,7 @@ public:
 	bool intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir, glm::vec2 &intrsctn);
 	bool intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir);
 private:
-	glm::vec2 normal;
+	glm::vec2 normal = glm::vec2(0.f);
 };
 
 class Cubic : public BezierCurve {
