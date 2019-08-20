@@ -11,9 +11,11 @@
 #include "Shape.hpp"
 #include "PointUtil.hpp"
 
+enum Mode {SELECT, DRAW};
 enum CurveMode {LINEAR, CUBIC};
 enum DrawMode {ON, OFF, MOVE_CTRL, MOVE_BP};
 
+Mode mode = SELECT;
 CurveMode curveMode = LINEAR;
 DrawMode drawMode = OFF;
 
@@ -23,7 +25,10 @@ int MENU_WIDTH = 25;
 float DETECTION_RANGE = 12; // in pixel
 float PS_Lm = 20; // distance between points
 bool moveStart; // move start of end of clicked curve
+bool selecting = false;;
+
 sf::Text buttonText;
+sf::RectangleShape selectionRect;
 
 // all the curves
 std::vector<BezierCurve*> curvesSoup;
@@ -59,12 +64,38 @@ void drawMenuBar(sf::RenderWindow &window, sf::Font &font) {
 	buttonText.setFillColor(sf::Color::White);
 	buttonText.setPosition(BUTTON_XOFFSET, 0);
 
+	sf::Text modeText;
+	modeText.setFont(font);
+	if (mode == SELECT) {
+		modeText.setString("Select");
+	}
+	else {
+		modeText.setString("Draw");
+	}
+	modeText.setCharacterSize(24);
+	modeText.setFillColor(sf::Color::White);
+	// TODO: use length of prev button
+	modeText.setPosition(BUTTON_XOFFSET + BUTTON_LEN, 0);
+
 	window.draw(rect);
 	window.draw(buttonText);
+	window.draw(modeText);
 }
 
 bool isCurveModeClicked(int x, int y) {
 	return (x >= BUTTON_XOFFSET && x <= BUTTON_XOFFSET + BUTTON_LEN && y <= MENU_WIDTH);
+}
+
+int whichButtonClicked(int x, int y) {
+	if (y <= MENU_WIDTH) {
+		if (x >= BUTTON_XOFFSET && x <= BUTTON_XOFFSET + BUTTON_LEN) {
+			return 0;
+		}
+		else if (x >= BUTTON_XOFFSET + BUTTON_LEN && x <= BUTTON_XOFFSET + 2.f * BUTTON_LEN) {
+			return 1;
+		}
+	}
+	return -1;
 }
 
 bool isMenuClicked(int y) {
@@ -213,10 +244,17 @@ void drawPSets(sf::RenderWindow &window) {
 	}
 }
 
+void drawSelectBox(sf::RenderWindow &window) {
+	if (mode == SELECT) {
+		window.draw(selectionRect);
+	}
+}
+
 void redrawEvrything(sf::RenderWindow &window, sf::Font &font) {
 	drawMenuBar(window, font);
 	drawCurves(window);
 	drawPSets(window);
+	drawSelectBox(window);
 	window.display();
 }
 
@@ -228,9 +266,13 @@ int main()
 		throw std::exception("cannot read font");
 	}
 
+	// draw the UI
 	sf::RenderWindow  window(sf::VideoMode(800, 600), "My window");
 	window.clear(sf::Color::Black);
 	drawMenuBar(window, font);
+	selectionRect.setFillColor(sf::Color(255, 187, 0, 80));
+	selectionRect.setOutlineColor(sf::Color(255, 187, 0, 255));
+	selectionRect.setOutlineThickness(1.f);
 	window.display();
 
 	// run the program as long as the window is open
@@ -239,7 +281,22 @@ int main()
 		// check all the window's events that were triggered since the last iteration of the loop
 		sf::Event event;
 		// if dragging
-		if (drawMode == MOVE_CTRL || drawMode == MOVE_BP) {
+		if (mode == SELECT && selecting) {
+			if (!sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+				// check if merge shape
+				selecting = false;
+			}
+			else {
+				sf::Vector2i position = sf::Mouse::getPosition(window);
+				int selectBoxLen = position.x - selectionRect.getPosition().x;
+				int selectBoxWidth = position.y - selectionRect.getPosition().y;
+				selectionRect.setSize(sf::Vector2f(selectBoxLen, selectBoxWidth));
+				// redraw
+				window.clear();
+				redrawEvrything(window, font);
+			}
+		}
+		else if (drawMode == MOVE_CTRL || drawMode == MOVE_BP) {
 			 // mouse released
 			if (!sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
 				// check if merge shape
@@ -312,8 +369,9 @@ int main()
 				std::cout << "mouse pressed: " << event.mouseButton.x << ", " << event.mouseButton.y << std::endl;
 				// can only click menu is not in the middle of drawing a curve
 				if (isMenuClicked(event.mouseButton.y) && (drawMode!= ON)) {
-					// curve mode button clicked
-					if (isCurveModeClicked(event.mouseButton.x, event.mouseButton.y)) {
+					int buttonIdClicked = whichButtonClicked(event.mouseButton.x, event.mouseButton.y);
+					// curve mode
+					if (buttonIdClicked == 0) {
 						if (curveMode == LINEAR) {
 							curveMode = CUBIC;
 						}
@@ -321,6 +379,20 @@ int main()
 							curveMode = LINEAR;
 						}
 					}
+					else if (buttonIdClicked == 1) {
+						if (mode == SELECT) {
+							mode = DRAW;
+						}
+						else {
+							mode = SELECT;
+						}
+					}
+				}
+				else if (mode == SELECT) {
+					// draw square
+					selecting = true;
+					selectionRect.setPosition(sf::Vector2f(event.mouseButton.x, event.mouseButton.y));
+					selectionRect.setSize(sf::Vector2f(0.f, 0.f));
 				}
 				else {
 					glm::vec2 clickedPos = glm::vec2(event.mouseButton.x, event.mouseButton.y); 
