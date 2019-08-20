@@ -53,6 +53,7 @@ public:
 	bool intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir, glm::vec2 &intrsctn);
 	bool intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir);
 private:
+	bool hasNormal = false;
 	glm::vec2 normal;
 };
 

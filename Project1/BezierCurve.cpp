@@ -89,7 +89,7 @@ bool Linear::intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir) {
 
 glm::vec2 Linear::getNormalAtT(float t, bool cw) {
 	// normal not defined
-	if (glm::length(normal) < 1.f) {
+	if (!hasNormal) {
 		glm::vec2 s2e = end.loc - start.loc;
 		glm::vec2 normal_nn;
 		// inverted, something to do with the display??
@@ -99,6 +99,7 @@ glm::vec2 Linear::getNormalAtT(float t, bool cw) {
 		else {
 			normal_nn = rotate90cw(s2e);
 		}
+		hasNormal = true;
 		normal = glm::normalize(normal_nn);
 	}
 	return normal;
