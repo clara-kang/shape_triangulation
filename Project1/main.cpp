@@ -14,11 +14,11 @@
 #include "PointUtil.hpp"
 #include "MathUtil.hpp"
 
-enum Mode {SELECT, DRAW};
+enum Mode {DRAW = 0, SELECT = 1, MOVE = 2};
 enum CurveMode {LINEAR, CUBIC};
 enum DrawMode {ON, OFF, MOVE_CTRL, MOVE_BP};
 
-Mode mode = SELECT;
+Mode mode = DRAW;
 CurveMode curveMode = LINEAR;
 DrawMode drawMode = OFF;
 
@@ -28,7 +28,10 @@ int MENU_WIDTH = 25;
 float DETECTION_RANGE = 12; // in pixel
 float PS_Lm = 20; // distance between points
 bool moveStart; // move start of end of clicked curve
-bool selecting = false;;
+bool selecting = false;
+bool moving = false;
+
+glm::vec2 prevPos; // used for moving
 
 sf::Text buttonText;
 sf::RectangleShape selectionRect;
@@ -73,6 +76,9 @@ void drawMenuBar(sf::RenderWindow &window, sf::Font &font) {
 	modeText.setFont(font);
 	if (mode == SELECT) {
 		modeText.setString("Select");
+	}
+	else if (mode == MOVE) {
+		modeText.setString("Move");
 	}
 	else {
 		modeText.setString("Draw");
@@ -362,6 +368,26 @@ int main()
 			window.clear();
 			redrawEvrything(window, font);
 		}
+		else if (mode == MOVE && moving) {
+			if (!sf::Mouse::isButtonPressed(sf::Mouse::Left) || selectedCurves.size() == 0) {
+				moving = false;
+			}
+			else {
+				sf::Vector2i position = sf::Mouse::getPosition(window);
+				glm::vec2 curPos = glm::vec2(position.x, position.y);
+				glm::vec2 displacement = curPos - prevPos;
+			
+				for (auto it = selectedCurves.begin(); it != selectedCurves.end(); ++it) {
+					BezierCurve *c = *it;
+					c->move(displacement);
+				}
+				
+				prevPos = curPos;
+				// redraw
+				window.clear();
+				redrawEvrything(window, font);
+			}
+		}
 		else if (drawMode == MOVE_CTRL || drawMode == MOVE_BP) {
 			 // mouse released
 			if (!sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
@@ -446,12 +472,7 @@ int main()
 						}
 					}
 					else if (buttonIdClicked == 1) {
-						if (mode == SELECT) {
-							mode = DRAW;
-						}
-						else {
-							mode = SELECT;
-						}
+						mode = (Mode)((mode + 1) % 3);
 					}
 				}
 				else if (mode == SELECT) {
@@ -459,6 +480,30 @@ int main()
 					selecting = true;
 					selectionRect.setPosition(sf::Vector2f(event.mouseButton.x, event.mouseButton.y));
 					selectionRect.setSize(sf::Vector2f(0.f, 0.f));
+				}
+				else if (mode == MOVE) {
+					moving = true;
+					prevPos = glm::vec2(event.mouseButton.x, event.mouseButton.y);
+					// if need to create copy
+					if (sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt) ||
+						sf::Keyboard::isKeyPressed(sf::Keyboard::RAlt)) {
+						std::set<BezierCurve*> copiedCurves;
+						for (auto it = selectedCurves.begin(); it != selectedCurves.end(); ++it) {
+							BezierCurve *c = *it;
+							if (c->getStart().isCubic()) {
+								Cubic *copy = new Cubic(*static_cast<Cubic*>(c));
+								curvesSoup.push_back(static_cast<BezierCurve*>(copy));
+								copiedCurves.insert(copy);
+							}
+							else {
+								Linear *copy = new Linear(*static_cast<Linear*>(c));
+								curvesSoup.push_back(static_cast<BezierCurve*>(copy));
+								copiedCurves.insert(copy);
+							}
+						}
+						selectedCurves.clear();
+						selectedCurves.insert(copiedCurves.begin(), copiedCurves.end());
+					}
 				}
 				else {
 					glm::vec2 clickedPos = glm::vec2(event.mouseButton.x, event.mouseButton.y); 

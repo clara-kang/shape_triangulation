@@ -28,6 +28,19 @@ void BezierPoint::moveTo(glm::vec2 pos) {
 	}
 }
 
+BezierPoint::BezierPoint(const BezierPoint& b) {
+	this->loc = b.loc;
+	this->ctrl_loc = b.ctrl_loc;
+	this->cubic = b.isCubic();
+}
+
+BezierPoint &BezierPoint::operator=(const BezierPoint& b) {
+	this->loc = b.loc;
+	this->ctrl_loc = b.ctrl_loc;
+	this->cubic = b.isCubic();
+	return *this;
+}
+
 void BezierPoint::render(sf::RenderWindow &window) {
 	// need to offset since circle center not drawn where clicked
 	sf::Vector2f pt_loc(this->loc.x - CIRCLE_RADIUS / 2.f, this->loc.y - CIRCLE_RADIUS / 2.f);

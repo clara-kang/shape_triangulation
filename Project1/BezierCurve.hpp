@@ -15,7 +15,6 @@ public:
 	};
 	BezierCurve() {};
 	BezierCurve(BezierPoint start, BezierPoint end);
-
 	const BezierPoint &getStart();
 	const BezierPoint &getEnd();
 	
@@ -24,6 +23,7 @@ public:
 	virtual void moveStartCtrl(glm::vec2 pos);
 	virtual void moveEndCtrl(glm::vec2 pos);
 
+	virtual void move(glm::vec2 displacement) = 0;
 	virtual float getLength() = 0;
 	virtual glm::vec2 getPointAtLength(float length) = 0;
 	virtual glm::vec2 getPointAtLength(float length, float &stopt) = 0;
@@ -45,10 +45,12 @@ class Linear : public BezierCurve {
 public:
 	Linear() {};
 	Linear(BezierPoint start, BezierPoint end);
+	Linear(const Linear &linear);
 	BezierCurve::type getType();
 
 	void render(sf::RenderWindow &window);
 	void renderSelected(sf::RenderWindow &window);
+	void move(glm::vec2 displacement);
 	float getLength();
 	glm::vec2 getPointAtLength(float length);
 	glm::vec2 getPointAtLength(float length, float &stopt);
@@ -64,6 +66,7 @@ private:
 class Cubic : public BezierCurve {
 public:
 	Cubic(BezierPoint start, BezierPoint end);
+	Cubic(const Cubic &cubic);
 	BezierCurve::type getType();
 	void moveStartPos(glm::vec2 pos) override;
 	void moveEndPos(glm::vec2 pos) override;
@@ -72,6 +75,7 @@ public:
 
 	void render(sf::RenderWindow &window);
 	void renderSelected(sf::RenderWindow &window);
+	void move(glm::vec2 displacement);
 	float getLength();
 	glm::vec2 getPointAtLength(float length);
 	glm::vec2 getPointAtLength(float length, float &stopt);

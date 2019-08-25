@@ -7,6 +7,8 @@ class BezierPoint {
 public:
 	BezierPoint() {};
 	BezierPoint(glm::vec2 loc, bool cubic);
+	BezierPoint (const BezierPoint& b);
+	BezierPoint &operator=(const BezierPoint& b);
 
 	bool isCubic() const;
 	// move loc and ctrl

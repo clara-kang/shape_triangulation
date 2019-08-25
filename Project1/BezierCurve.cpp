@@ -26,6 +26,9 @@ void BezierCurve::renderPts(sf::RenderWindow &window) {
 
 Linear::Linear(BezierPoint start, BezierPoint end) : BezierCurve(start, end) {}
 
+Linear::Linear(const Linear &linear) : BezierCurve(linear.start, linear.end) {
+}
+
 void BezierCurve::moveStartPos(glm::vec2 pos) {
 	start.moveTo(pos);
 }
@@ -44,6 +47,11 @@ void BezierCurve::moveEndCtrl(glm::vec2 pos) {
 
 BezierCurve::type Linear::getType() {
 	return BezierCurve::type::LINEAR;
+}
+
+void Linear::move(glm::vec2 displacement) {
+	start.loc += displacement;
+	end.loc += displacement;
 }
 
 float Linear::getLength() {
@@ -143,6 +151,12 @@ Cubic::Cubic(BezierPoint start, BezierPoint end) :
 	getConvexHull();
 }
 
+Cubic::Cubic(const Cubic &cubic) {
+	this->start = cubic.start;
+	this->end = cubic.end;
+	getConvexHull();
+}
+
 void Cubic::moveStartPos(glm::vec2 pos) {
 	BezierCurve::moveStartPos(pos);
 	getConvexHull();
@@ -164,6 +178,14 @@ void Cubic::moveEndCtrl(glm::vec2 pos) {
 
 BezierCurve::type Cubic::getType() {
 	return BezierCurve::type::CUBIC;
+}
+
+void Cubic::move(glm::vec2 displacement) {
+	start.loc += displacement;
+	end.loc += displacement;
+	start.ctrl_loc += displacement;
+	end.ctrl_loc += displacement;
+	getConvexHull();
 }
 
 glm::vec2 Cubic::getPointAtT(float t) {
