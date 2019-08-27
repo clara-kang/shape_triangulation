@@ -14,7 +14,7 @@
 #include "PointUtil.hpp"
 #include "MathUtil.hpp"
 
-enum Mode {DRAW = 0, SELECT = 1, MOVE = 2};
+enum Mode {DRAW = 0, SELECT = 1, MOVE = 2, PAIR = 3};
 enum CurveMode {LINEAR, CUBIC};
 enum DrawMode {ON, OFF, MOVE_CTRL, MOVE_BP};
 
@@ -300,6 +300,45 @@ void selectCurves() {
 	encloseCurves(corners);
 }
 
+bool getSelectedConnected(BezierCurve *c, std::vector<BezierCurve*> &connected) {
+	connected.push_back(c);
+	Shape *shape = getShapeWithCurve(c);
+	BezierCurve *next = shape->getNextCurve(c);
+	BezierCurve *prev = shape->getPrevCurve(c);
+	bool allselected = false;
+	// go forward
+	while (true) {
+		if (next == c) {
+			allselected = true;
+			break;
+		}
+		if (std::find(selectedCurves.begin(), selectedCurves.end(), next) == selectedCurves.end()) {
+			break;
+		}
+		else {
+			connected.push_back(next);
+			next = shape->getNextCurve(next);
+		}
+	}
+	// go backward
+	if (!allselected) {
+		while (true) {
+			if (prev == c) {
+				allselected = true;
+				break;
+			}
+			if (std::find(selectedCurves.begin(), selectedCurves.end(), prev) == selectedCurves.end()) {
+				break;
+			}
+			else {
+				connected.insert(connected.begin(), prev);
+				prev = shape->getPrevCurve(prev);
+			}
+		}
+	}
+	return allselected;
+}
+
 void drawCurves(sf::RenderWindow &window) {
 	for (std::vector<BezierCurve*>::iterator it = curvesSoup.begin(); it != curvesSoup.end(); ++it) {
 		(*it)->render(window);
@@ -488,20 +527,32 @@ int main()
 					if (sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt) ||
 						sf::Keyboard::isKeyPressed(sf::Keyboard::RAlt)) {
 						std::set<BezierCurve*> copiedCurves;
-						for (auto it = selectedCurves.begin(); it != selectedCurves.end(); ++it) {
-							BezierCurve *c = *it;
-							if (c->getStart().isCubic()) {
-								Cubic *copy = new Cubic(*static_cast<Cubic*>(c));
-								curvesSoup.push_back(static_cast<BezierCurve*>(copy));
-								copiedCurves.insert(copy);
+						while (!selectedCurves.empty()) {
+							BezierCurve *curve = *selectedCurves.begin();
+							std::vector<BezierCurve*> connected;
+							bool loop = getSelectedConnected(curve, connected);
+							Shape *copied_shape = new Shape();
+							for (BezierCurve *c : connected) {
+								if (c->getStart().isCubic()) {
+									Cubic *copy = new Cubic(*static_cast<Cubic*>(c));
+									curvesSoup.push_back(static_cast<BezierCurve*>(copy));
+									copiedCurves.insert(copy);
+									copied_shape->curves.push_back(copy);
+								}
+								else {
+									Linear *copy = new Linear(*static_cast<Linear*>(c));
+									curvesSoup.push_back(static_cast<BezierCurve*>(copy));
+									copiedCurves.insert(copy);
+									copied_shape->curves.push_back(copy);
+								}
+								auto c_pos = selectedCurves.find(c);
+								selectedCurves.erase(c_pos);
 							}
-							else {
-								Linear *copy = new Linear(*static_cast<Linear*>(c));
-								curvesSoup.push_back(static_cast<BezierCurve*>(copy));
-								copiedCurves.insert(copy);
+							if (loop) {
+								copied_shape->completed = true;
 							}
+							shapesSoup.push_back(copied_shape);
 						}
-						selectedCurves.clear();
 						selectedCurves.insert(copiedCurves.begin(), copiedCurves.end());
 					}
 				}
