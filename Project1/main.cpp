@@ -415,12 +415,37 @@ int main()
 				sf::Vector2i position = sf::Mouse::getPosition(window);
 				glm::vec2 curPos = glm::vec2(position.x, position.y);
 				glm::vec2 displacement = curPos - prevPos;
-			
+				
+				// move the endpoints of connected curves
+				std::set<BezierCurve*> copiedCurves;
+				while (!selectedCurves.empty()) {
+					BezierCurve *curve = *selectedCurves.begin();
+					Shape *shape = getShapeWithCurve(curve);
+					std::vector<BezierCurve*> connected;
+					bool loop = getSelectedConnected(curve, connected);
+					if (!loop) {
+						BezierCurve *prev = shape->getPrevCurve(connected[0]);
+						if (prev != NULL) {
+							prev->moveEndPos(prev->getEnd().loc + displacement);
+						}
+						BezierCurve *next = shape->getNextCurve(connected.end()[-1]);
+						if (next != NULL) {
+							next->moveStartPos(next->getStart().loc + displacement);
+						}
+					}
+					for (BezierCurve *c : connected) {
+						auto c_pos = selectedCurves.find(c);
+						selectedCurves.erase(c_pos);
+						copiedCurves.insert(c);
+					}
+				}
+				selectedCurves.insert(copiedCurves.begin(), copiedCurves.end());
+				// move the selected curves
 				for (auto it = selectedCurves.begin(); it != selectedCurves.end(); ++it) {
 					BezierCurve *c = *it;
 					c->move(displacement);
 				}
-				
+				// update cursor position
 				prevPos = curPos;
 				// redraw
 				window.clear();
