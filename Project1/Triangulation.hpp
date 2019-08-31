@@ -19,6 +19,6 @@ namespace Triangulation {
 	CONN_T mergeLeftRight(sf::RenderWindow *window, CONN_T left_trgltn, CONN_T right_trgltn,
 		std::vector<int> left_indices, std::vector<int> right_indices, const PS_T &P);
 	std::pair<int, int> findBaseEdge(CONN_T left_trgltn, CONN_T right_trgltn,
-		std::vector<int> left_indices, std::vector<int> right_indices, const PS_T &P);
+		std::vector<int> left_indices, std::vector<int> right_indices, const PS_T &P, sf::RenderWindow *window);
 };
 

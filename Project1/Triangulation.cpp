@@ -5,7 +5,7 @@
 
 static float PI = 3.1415926f;
 static float BIG = 500.f;
-static float EPSILON(1e-4);
+static float EPSILON(1e-2);
 
 void Triangulation::render(sf::RenderWindow *window, CONN_T trgltn, const PS_T &P) {
 	for (auto it = P.begin(); it != P.end(); ++it) {
@@ -61,11 +61,22 @@ CONN_T Triangulation::triangulateRec(sf::RenderWindow *window, std::vector<int> 
 	// if equal or less than 3 points, base case
 	if (indices.size() <= 3) {
 		CONN_T merged;
-		for (int i = 0; i < indices.size(); i++) {
-			for (int j = i + 1; j < indices.size(); j++) {
-				merged.push_back(std::make_pair(indices[i], indices[j]));
+		int mid_index;
+		/*if (indices.size() == 3 && 
+			onSameLine(P[indices[0]], P[indices[1]], P[indices[2]], mid_index)) {
+			for (int i = 0; i < 3; i++) {
+				if (i != mid_index) {
+					merged.push_back(std::make_pair(indices[mid_index], indices[i]));
+				}
 			}
 		}
+		else {*/
+			for (int i = 0; i < indices.size(); i++) {
+				for (int j = i + 1; j < indices.size(); j++) {
+					merged.push_back(std::make_pair(indices[i], indices[j]));
+				}
+			}
+		//}
 		window->clear(sf::Color::Black);
 		Triangulation::render(window, indices, merged, P);
 		window->display();
@@ -170,7 +181,7 @@ int getLeftRightCandidate(bool right, int other_last_index, int this_last_index,
 		for (int i = 0; i < angles_w_base.size(); i++) {
 			// last candidate
 			if (i == angles_w_base.size() - 1) {
-				bool angle_valid = angles_w_base[i].second > EPSILON && angles_w_base[i].second < PI - EPSILON;
+				bool angle_valid = angles_w_base[i].second < PI - EPSILON;
 				if (angle_valid) {
 					valid_right_cand = angles_w_base[i].first;
 				}
@@ -209,7 +220,7 @@ int getLeftRightCandidate(bool right, int other_last_index, int this_last_index,
 }
 
 std::pair<int, int> Triangulation::findBaseEdge(CONN_T left_trgltn, CONN_T right_trgltn,
-	std::vector<int> left_indices, std::vector<int> right_indices, const PS_T &P) {
+	std::vector<int> left_indices, std::vector<int> right_indices, const PS_T &P, sf::RenderWindow *window) {
 	auto minY = [P](int i1, int i2) {
 		return P[i1].y < P[i2].y;
 	};
@@ -234,13 +245,34 @@ std::pair<int, int> Triangulation::findBaseEdge(CONN_T left_trgltn, CONN_T right
 			glm::vec2 left_base_v = P[lower_vs[i]];
 			bool intrsct = false;
 			for (auto it = left_trgltn.begin(); it != left_trgltn.end(); ++it) {
-				if (segIntersectMiddle(P[it->first], P[it->second], left_base_v, right_base_v)) {
-					bool intrsct = true;
+				// todo:: remove after debug
+				sf::Vertex line[] =
+				{
+					sf::Vertex(sf::Vector2f(P[it->first].x, -P[it->first].y), sf::Color::Blue),
+					sf::Vertex(sf::Vector2f(P[it->second].x, -P[it->second].y), sf::Color::Blue)
+				};
+				window->clear();
+				render(window, left_indices, left_trgltn, P);
+				render(window, right_indices, right_trgltn, P);
+				renderPoint(window, P[lower_vs[i]], sf::Color::Yellow);
+				renderPoint(window, P[right_minY_index], sf::Color::Blue);
+				window->draw(line, 2, sf::Lines);
+				window->display();
+				// end of rendering
+				if (segIntersectMiddle(P[it->first], P[it->second], right_base_v, left_base_v)) {
+					intrsct = true;
 					break;
 				}
 			}
 			if (!intrsct) {
 				left_minY_index = lower_vs[i];
+				break;
+			}
+			// reached the last one, still didn't find a base vertex
+			else if (i == lower_vs.size() - 1) {
+				//throw std::exception("didn't find base v");
+				left_minY_index = lower_vs[i];
+				break;
 			}
 		}
 	}
@@ -259,6 +291,20 @@ std::pair<int, int> Triangulation::findBaseEdge(CONN_T left_trgltn, CONN_T right
 			glm::vec2 right_base_v = P[lower_vs[i]];
 			bool intrsct = false;
 			for (auto it = right_trgltn.begin(); it != right_trgltn.end(); ++it) {
+				// todo:: remove after debug
+				sf::Vertex line[] =
+				{
+					sf::Vertex(sf::Vector2f(P[it->first].x, -P[it->first].y), sf::Color::Blue),
+					sf::Vertex(sf::Vector2f(P[it->second].x, -P[it->second].y), sf::Color::Blue)
+				};
+				window->clear();
+				render(window, left_indices, left_trgltn, P);
+				render(window, right_indices, right_trgltn, P);
+				renderPoint(window, P[left_minY_index], sf::Color::Yellow);
+				renderPoint(window, P[lower_vs[i]], sf::Color::Blue);
+				window->draw(line, 2, sf::Lines);
+				window->display();
+				// end of rendering
 				if (segIntersectMiddle(P[it->first], P[it->second], left_base_v, right_base_v)) {
 					intrsct = true;
 					break;
@@ -266,6 +312,14 @@ std::pair<int, int> Triangulation::findBaseEdge(CONN_T left_trgltn, CONN_T right
 			}
 			if (!intrsct) {
 				right_minY_index = lower_vs[i];
+				break;
+			}
+			// reached the last one, still didn't find a base vertex
+			else if (i == lower_vs.size() - 1) {
+				// todo :: handle same line
+				//throw std::exception("didn't find base v");
+				right_minY_index = lower_vs[i];
+				break;
 			}
 		}
 	}
@@ -275,7 +329,7 @@ std::pair<int, int> Triangulation::findBaseEdge(CONN_T left_trgltn, CONN_T right
 CONN_T Triangulation::mergeLeftRight(sf::RenderWindow *window, CONN_T left_trgltn, CONN_T right_trgltn,
 	std::vector<int> left_indices, std::vector<int> right_indices, const PS_T &P) {
 
-	auto base_edge_info = findBaseEdge(left_trgltn, right_trgltn, left_indices, right_indices, P);
+	auto base_edge_info = findBaseEdge(left_trgltn, right_trgltn, left_indices, right_indices, P, window);
 	int left_minY_index = base_edge_info.first;
 	int right_minY_index = base_edge_info.second;
 

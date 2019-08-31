@@ -65,7 +65,7 @@ glm::vec2 Linear::getPointAtLength(float stoplength, float &stopt) {
 
 // assume ray_dir is normalized
 bool Linear::intersect(glm::vec2 &ray_start, glm::vec2 &ray_dir, glm::vec2 &intrsctn) {
-	// normalized direction vector from start to end
+	// direction vector from start to end
 	glm::vec2 c_dir = end.loc - start.loc;
 	// lhs of the equation
 	glm::mat2 A = glm::mat2(ray_dir, -c_dir);
